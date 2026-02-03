@@ -17,12 +17,16 @@ pub struct HeaderChunk {
     /// The number of track chunks in the file.
     pub tracks_count: u16,
 
+    /// Specifies the meaning of the delta-times.
     pub division: Division,
 }
 
 #[derive(Debug)]
 pub enum Division {
+    /// For metrical time.
     TicksPerQuarterNote(u16),
+
+    /// For time-code-based time.
     TimeCode {
         frames_per_second: FramesPerSecond,
         ticks_per_frame: u8,
@@ -45,6 +49,12 @@ pub enum TryFromU16ToDivisionError {
 impl TryFrom<[u8; 2]> for Division {
     type Error = TryFromU16ToDivisionError;
 
+    /// If bit 15 of `value` is a zero, the bits 14 thru 0 represent the number
+    /// of delta-time "ticks" which make up a quarter-note.
+    ///
+    /// If bit 15 of `value` is a one, delta-times in a file correspond to
+    /// subdivisions of a second, in a way consistent with SMPTE and MIDI
+    /// time code.
     fn try_from(value: [u8; 2]) -> Result<Self, Self::Error> {
         let [high, low] = value;
 
