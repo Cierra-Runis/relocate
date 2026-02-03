@@ -1,7 +1,7 @@
 use derive_more::Debug;
 
 use crate::{
-    chunk::{Chunk, kind::ChunkKind},
+    chunk::{Chunk, ChunkKind},
     midi::format::MIDIFormat,
 };
 

@@ -1,5 +1,6 @@
 use relocate_midi::{
-    chunk::{Chunk, header::HeaderChunk, kind::ChunkKind},
+    chunk::{Chunk, ChunkKind},
+    description::header::HeaderChunk,
     midi::MIDIFile,
 };
 use std::fs;

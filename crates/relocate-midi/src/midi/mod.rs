@@ -2,7 +2,7 @@ pub mod format;
 
 use derive_more::Debug;
 
-use crate::chunk::{Chunk, kind::ChunkKind};
+use crate::chunk::{Chunk, ChunkKind};
 
 /// To any file system, a [MIDI File](MIDIFile)
 /// is simply a [series of 8-bit bytes](Vec<u8>).
