@@ -74,6 +74,13 @@ dependencies = [
 name = "relocate"
 version = "0.1.0"
 dependencies = [
+ "relocate-midi",
+]
+
+[[package]]
+name = "relocate-midi"
+version = "0.1.0"
+dependencies = [
  "anyhow",
  "derive_more",
  "hex",

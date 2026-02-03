@@ -1,0 +1,7 @@
+[package]
+name = "relocate"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+relocate-midi = { path = "../relocate-midi" }
