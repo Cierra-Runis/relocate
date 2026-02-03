@@ -1,13 +1,13 @@
 pub mod format;
 
-use derive_more::{Debug, Display, Error};
+use derive_more::Debug;
 
 use crate::chunk::{Chunk, kind::ChunkKind};
 
 /// To any file system, a [MIDI File](MIDIFile)
 /// is simply a [series of 8-bit bytes](Vec<u8>).
-#[derive(Debug, Display, Clone)]
-#[display("{}", pretty_hex::pretty_hex(_0))]
+#[derive(Debug, Clone)]
+#[debug("{}", pretty_hex::pretty_hex(_0))]
 pub struct MIDIFile(Vec<u8>);
 
 impl From<Vec<u8>> for MIDIFile {
@@ -16,15 +16,11 @@ impl From<Vec<u8>> for MIDIFile {
     }
 }
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug)]
 pub enum TryFromMIDIFileError {
-    #[debug("Incomplete chunk prefix: file ended before reading 8-byte prefix")]
     IncompleteChunkPrefix,
-    #[debug("Malformed chunk kind: failed to parse 4-byte type identifier")]
     MalformedChunkKind,
-    #[debug("Malformed chunk length: failed to parse 4-byte length field")]
     MalformedChunkLength,
-    #[debug("Truncated chunk data: declared length exceeds remaining file size")]
     TruncatedChunkData,
 }
 

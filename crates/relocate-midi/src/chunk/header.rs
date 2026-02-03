@@ -1,4 +1,4 @@
-use derive_more::{Debug, Display, Error};
+use derive_more::Debug;
 
 use crate::{
     chunk::{Chunk, kind::ChunkKind},
@@ -40,7 +40,7 @@ pub enum FramesPerSecond {
     FPS30 = -30,
 }
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug)]
 pub enum TryFromU16ToDivisionError {
     InvalidFPS,
 }
@@ -71,11 +71,9 @@ impl TryFrom<[u8; 2]> for Division {
     }
 }
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug)]
 pub enum TryFromChunkError {
-    #[debug("Invalid chunk kind: expected Header chunk")]
     InvalidChunkKind,
-    #[debug("Malformed MIDI format field: unknown MIDI format bytes")]
     MalformedMIDIFormat,
     MalformedTracksCount,
     MalformedDivision,

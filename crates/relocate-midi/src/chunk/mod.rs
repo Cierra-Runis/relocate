@@ -1,7 +1,7 @@
 pub mod header;
 pub mod kind;
 
-use derive_more::{Debug, Display};
+use derive_more::Debug;
 
 use crate::chunk::kind::ChunkKind;
 
@@ -16,9 +16,7 @@ use crate::chunk::kind::ChunkKind;
 /// [type]: Chunk::kind
 /// [length]: Chunk::length
 /// [chunk type]: ChunkKind
-#[derive(Debug, Display)]
-#[debug("Chunk: kind={:?}, length={:?}, data={}", kind, length, pretty_hex::pretty_hex(&data))]
-#[display("Chunk: kind={}, length={}", kind, length)]
+#[derive(Debug)]
 pub struct Chunk {
     /// Each [chunk](Chunk) begins with a 4-character ASCII [type](Chunk::kind).
     pub kind: ChunkKind,
@@ -35,5 +33,6 @@ pub struct Chunk {
     /// occupy 14 bytes in the disk file.
     pub length: u32,
 
+    #[debug("{}", pretty_hex::pretty_hex(&data))]
     pub data: Vec<u8>,
 }

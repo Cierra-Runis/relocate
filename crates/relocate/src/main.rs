@@ -9,13 +9,15 @@ fn main() {
     let bytes = fs::read(path).expect("Failed to read MIDI file");
     let midi_file = MIDIFile::from(bytes);
 
+    eprintln!("{:?}", midi_file);
+
     match Vec::<Chunk>::try_from(midi_file) {
         Ok(chunks) => {
             for chunk in chunks {
                 match chunk.kind {
                     ChunkKind::Header(_) => match HeaderChunk::try_from(&chunk) {
                         Ok(chunk) => println!("Found a Header chunk: {:?}", chunk),
-                        Err(e) => eprintln!("Error parsing Header chunk: {e}"),
+                        Err(e) => eprintln!("Error parsing Header chunk: {:?}", e),
                     },
                     ChunkKind::Track(_) => {
                         println!("Found a Track chunk with length {}", chunk.length);
@@ -26,6 +28,6 @@ fn main() {
                 }
             }
         }
-        Err(e) => eprintln!("Error parsing MIDI file: {}", e),
+        Err(e) => eprintln!("Error parsing MIDI file: {:?}", e),
     }
 }

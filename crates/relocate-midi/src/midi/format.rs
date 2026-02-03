@@ -1,4 +1,4 @@
-use derive_more::{Debug, Display, Error};
+use derive_more::Debug;
 
 /// We may decide to define other format IDs to support other structures.
 ///
@@ -8,7 +8,7 @@ use derive_more::{Debug, Display, Error};
 ///
 /// Also, more parameters may be added to the MThd chunk in the future: it
 /// is important to read and honor the length, even if it is longer than 6.
-#[derive(Debug, Display)]
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum MIDIFormat {
     /// The file contains a single multi-channel track.
@@ -21,7 +21,7 @@ pub enum MIDIFormat {
     SequentiallyIndependentSingleTrackPatterns,
 }
 
-#[derive(Debug, Display, Error)]
+#[derive(Debug)]
 pub enum TryFromMIDIFormatError {
     #[debug("Unknown format bytes")]
     UnknownFormatBytes,
