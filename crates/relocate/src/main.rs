@@ -1,6 +1,6 @@
 use relocate_midi::{
     chunk::{Chunk, ChunkKind},
-    description::header::HeaderChunk,
+    description::{header::HeaderChunk, track::TrackChunk},
     midi::MIDIFile,
 };
 use std::fs;
@@ -20,9 +20,10 @@ fn main() {
                         Ok(chunk) => println!("Found a Header chunk: {:?}", chunk),
                         Err(e) => eprintln!("Error parsing Header chunk: {:?}", e),
                     },
-                    ChunkKind::Track(_) => {
-                        println!("Found a Track chunk with length {}", chunk.length);
-                    }
+                    ChunkKind::Track(_) => match TrackChunk::try_from(&chunk) {
+                        Ok(chunk) => println!("Found a Track chunk: {:?}", chunk),
+                        Err(e) => eprintln!("Error parsing Track chunk: {:?}", e),
+                    },
                     ChunkKind::Alien(_) => {
                         println!("Found an Alien chunk with length {}", chunk.length);
                     }
