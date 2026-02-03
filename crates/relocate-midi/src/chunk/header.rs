@@ -11,13 +11,10 @@ use crate::{
 /// [header chunk]: HeaderChunk
 #[derive(Debug)]
 pub struct HeaderChunk {
-    /// The [format](HeaderChunk::format) specifies
-    /// the overall organization of the file.
+    /// Specifies the overall organization of the file.
     pub format: MIDIFormat,
 
-    /// The [tracks_count](HeaderChunk::tracks_count) is the number of track
-    /// chunks in the file. It will always be `1` for
-    /// [MIDIFormat::SingleMultiChannelTrack].
+    /// The number of track chunks in the file.
     pub tracks_count: u16,
 
     pub division: Division,
@@ -95,6 +92,14 @@ impl TryFrom<&Chunk> for HeaderChunk {
                     .try_into()
                     .map_err(|_| TryFromChunkError::MalformedTracksCount)?;
                 let tracks_count = u16::from_be_bytes(tracks_count_bytes);
+
+                // It will always be `1` for [MIDIFormat::SingleMultiChannelTrack].
+                match format {
+                    MIDIFormat::SingleMultiChannelTrack if tracks_count != 1 => {
+                        return Err(TryFromChunkError::MalformedTracksCount);
+                    }
+                    _ => {}
+                }
 
                 let division_bytes: [u8; 2] = chunk.data[4..6]
                     .try_into()
