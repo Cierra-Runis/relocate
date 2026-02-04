@@ -3,6 +3,7 @@ pub mod format;
 use derive_more::Debug;
 
 use crate::chunk::{Chunk, ChunkKind};
+use crate::scanner::Scanner;
 
 /// To any file system, a [MIDI File](MIDIFile)
 /// is simply a [series of 8-bit bytes](Vec<u8>).
@@ -30,35 +31,31 @@ impl TryFrom<MIDIFile> for Vec<Chunk> {
     /// [MIDI File](MIDIFile)s are made up of [chunk](Chunk)s.
     fn try_from(midi_file: MIDIFile) -> Result<Self, Self::Error> {
         let mut chunks = Vec::new();
-        let mut i = 0;
+        let mut scanner = Scanner::new(&midi_file.0);
 
-        while i < midi_file.0.len() {
-            if i + 8 > midi_file.0.len() {
+        while !scanner.done() {
+            // Each chunk needs at least 8 bytes (4 for kind + 4 for length)
+            if !scanner.has_bytes(8) {
                 return Err(TryFromMIDIFileError::IncompleteChunkPrefix);
             }
 
-            let kind_bytes: [u8; 4] = midi_file.0[i..i + 4]
-                .try_into()
-                .map_err(|_| TryFromMIDIFileError::MalformedChunkKind)?;
+            // Read the chunk kind (4 bytes)
+            let kind_bytes = scanner
+                .eat_bytes::<4>()
+                .ok_or(TryFromMIDIFileError::MalformedChunkKind)?;
             let kind = ChunkKind::from(kind_bytes);
 
-            let length_bytes: [u8; 4] = midi_file.0[i + 4..i + 8]
-                .try_into()
-                .map_err(|_| TryFromMIDIFileError::MalformedChunkLength)?;
-            let length = u32::from_be_bytes(length_bytes);
+            // Read the chunk length (4 bytes, big-endian)
+            let length = scanner
+                .eat_u32_be()
+                .ok_or(TryFromMIDIFileError::MalformedChunkLength)?;
 
-            let data_start = i + 8;
-            let data_end = data_start + length as usize;
-
-            if data_end > midi_file.0.len() {
-                return Err(TryFromMIDIFileError::TruncatedChunkData);
-            }
-
-            let data = midi_file.0[data_start..data_end].to_vec();
+            // Read the chunk data
+            let data = scanner
+                .eat_vec(length as usize)
+                .ok_or(TryFromMIDIFileError::TruncatedChunkData)?;
 
             chunks.push(Chunk { kind, length, data });
-
-            i = data_end;
         }
 
         Ok(chunks)

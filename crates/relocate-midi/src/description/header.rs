@@ -3,6 +3,7 @@ use derive_more::Debug;
 use crate::{
     chunk::{Chunk, ChunkKind},
     midi::format::MIDIFormat,
+    scanner::Scanner,
 };
 
 /// The [header chunk] at the beginning of the file specifies some basic
@@ -92,16 +93,17 @@ impl TryFrom<&Chunk> for HeaderChunk {
     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
         match &chunk.kind {
             ChunkKind::Header(_) => {
-                let format_bytes: [u8; 2] = chunk.data[0..2]
-                    .try_into()
-                    .map_err(|_| TryFromChunkError::MalformedMIDIFormat)?;
+                let mut scanner = Scanner::new(&chunk.data);
+
+                let format_bytes = scanner
+                    .eat_bytes::<2>()
+                    .ok_or(TryFromChunkError::MalformedMIDIFormat)?;
                 let format = MIDIFormat::try_from(format_bytes)
                     .map_err(|_| TryFromChunkError::MalformedMIDIFormat)?;
 
-                let tracks_count_bytes: [u8; 2] = chunk.data[2..4]
-                    .try_into()
-                    .map_err(|_| TryFromChunkError::MalformedTracksCount)?;
-                let tracks_count = u16::from_be_bytes(tracks_count_bytes);
+                let tracks_count = scanner
+                    .eat_u16_be()
+                    .ok_or(TryFromChunkError::MalformedTracksCount)?;
 
                 // It will always be `1` for [MIDIFormat::SingleMultiChannelTrack].
                 match format {
@@ -111,9 +113,10 @@ impl TryFrom<&Chunk> for HeaderChunk {
                     _ => {}
                 }
 
-                let division_bytes: [u8; 2] = chunk.data[4..6]
-                    .try_into()
-                    .map_err(|_| TryFromChunkError::MalformedDivision)?;
+                // Read division (2 bytes)
+                let division_bytes = scanner
+                    .eat_bytes::<2>()
+                    .ok_or(TryFromChunkError::MalformedDivision)?;
                 let division = Division::try_from(division_bytes)
                     .map_err(|_| TryFromChunkError::MalformedDivision)?;
 

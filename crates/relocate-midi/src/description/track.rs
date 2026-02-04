@@ -1,6 +1,9 @@
 use derive_more::Debug;
 
-use crate::chunk::{Chunk, ChunkKind};
+use crate::{
+    chunk::{Chunk, ChunkKind},
+    scanner::Scanner,
+};
 
 /// The track chunks (type MTrk) are where actual song data is stored.  Each
 /// track chunk is simply a stream of MIDI events (and non-MIDI events),
@@ -51,78 +54,63 @@ impl TryFrom<&Chunk> for TrackChunk {
         match &chunk.kind {
             ChunkKind::Track(_) => {
                 let mut track_events = Vec::new();
-                let mut i = 0;
+                let mut scanner = Scanner::new(&chunk.data);
                 let mut running_status: Option<u8> = None;
 
-                while i < chunk.data.len() {
-                    let mut delta_time: u32 = 0;
+                while !scanner.done() {
+                    // Read variable-length delta time
+                    let delta_time = scanner
+                        .eat_variable_length_quantity()
+                        .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                    loop {
-                        let byte = chunk.data[i];
-                        i += 1;
+                    let status = scanner
+                        .peek()
+                        .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                        delta_time = (delta_time << 7) | ((byte & 0x7F) as u32);
-
-                        if (byte & 0x80) == 0 {
-                            break;
-                        }
-                    }
-
-                    let status = chunk.data[i];
                     let event = match status {
                         0xFF => {
-                            i += 1; // consume status byte
+                            scanner.eat(); // consume status byte
 
-                            let meta_type = chunk.data[i];
+                            let meta_type = scanner
+                                .eat()
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
                             debug_assert!(meta_type < 128);
-                            i += 1; // consume meta type
 
-                            // read VLQ length
-                            let mut length = 0u32;
-                            loop {
-                                let b = chunk.data[i];
-                                i += 1;
-                                length = (length << 7) | (b & 0x7F) as u32;
-                                if b & 0x80 == 0 {
-                                    break;
-                                }
-                            }
+                            // Read VLQ length
+                            let length = scanner
+                                .eat_variable_length_quantity()
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                            let data = &chunk.data[i..i + length as usize];
-                            i += length as usize;
+                            let data = scanner
+                                .eat_vec(length as usize)
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
                             Event::Meta {
                                 kind: meta_type,
-                                data: data.to_vec(),
+                                data,
                             }
                         }
 
                         0xF0 | 0xF7 => {
-                            i += 1; // consume status byte
+                            scanner.eat(); // consume status byte
 
                             // TIPS: Event::SystemExclude will reset running status
                             running_status = None;
 
-                            let mut length = 0u32;
-                            loop {
-                                let b = chunk.data[i];
-                                i += 1;
-                                length = (length << 7) | (b & 0x7F) as u32;
-                                if b & 0x80 == 0 {
-                                    break;
-                                }
-                            }
+                            // Read VLQ length
+                            let length = scanner
+                                .eat_variable_length_quantity()
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                            let data = &chunk.data[i..i + length as usize];
-                            i += length as usize;
+                            let data = scanner
+                                .eat_vec(length as usize)
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                            Event::SystemExclude {
-                                data: data.to_vec(),
-                            }
+                            Event::SystemExclude { data }
                         }
 
                         status_byte if status_byte >= 0x80 => {
-                            i += 1; // consume status byte
+                            scanner.eat(); // consume status byte
 
                             // TIPS: MIDI channel event with explicit status
                             running_status = Some(status_byte);
@@ -131,17 +119,17 @@ impl TryFrom<&Chunk> for TrackChunk {
                                 0xC0 | 0xD0 => 1, // Program Change, Channel Pressure
                                 _ => 2,
                             };
-                            let data = &chunk.data[i..i + data_len];
-                            i += data_len;
+                            let data = scanner
+                                .eat_vec(data_len)
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
                             Event::MIDI {
                                 status: status_byte,
-                                data: data.to_vec(),
+                                data,
                             }
                         }
 
                         _ => {
-                            i += 0; // do not consume byte since it's part of data
                             // MIDI channel event with running status
                             let status =
                                 running_status.ok_or(TryFromChunkError::MalformedRunningStatus)?;
@@ -150,20 +138,17 @@ impl TryFrom<&Chunk> for TrackChunk {
                                 0xC0 | 0xD0 => 1,
                                 _ => 2,
                             };
-                            let data = &chunk.data[i..i + data_len];
-                            i += data_len;
+                            let data = scanner
+                                .eat_vec(data_len)
+                                .ok_or(TryFromChunkError::MalformedRunningStatus)?;
 
-                            Event::MIDI {
-                                status,
-                                data: data.to_vec(),
-                            }
+                            Event::MIDI { status, data }
                         }
                     };
 
                     track_events.push(TrackEvent { delta_time, event });
                 }
 
-                debug_assert_eq!(i, chunk.data.len());
                 Ok(TrackChunk { track_events })
             }
             _ => Err(TryFromChunkError::InvalidChunkType),
