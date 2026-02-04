@@ -29,26 +29,31 @@ pub struct TrackEvent {
     /// Delta-time is in ticks as specified in the header chunk.
     pub delta_time: u32,
 
-    pub event_kind: EventKind,
+    pub kind: EventKind,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum EventKind {
     Meta {
-        status_byte: u8,
+        status: u8,
         data: Vec<u8>,
     },
     SystemExclusive {
-        /// `0xF0` or `0xF7`.
-        event_kind_byte: u8,
+        kind: SystemExclusiveEventKind,
         /// The length is stored as a variable-length quantity.
         length: u32,
         data: Vec<u8>,
     },
     MIDI {
-        status_byte: u8,
+        status: u8,
         data: Vec<u8>,
     },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SystemExclusiveEventKind {
+    F0,
+    F7,
 }
 
 #[derive(Debug)]
@@ -66,7 +71,7 @@ impl TryFrom<&Chunk> for TrackChunk {
     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
         match &chunk.kind {
             ChunkKind::Track(_) => {
-                let mut track_events = Vec::new();
+                let mut events = Vec::new();
                 let mut scanner = Scanner::new(&chunk.data);
 
                 // Running status is used: status bytes of MIDI events may be omitted
@@ -74,11 +79,11 @@ impl TryFrom<&Chunk> for TrackChunk {
                 let mut running_status: Option<u8> = None;
 
                 while !scanner.done() {
-                    let track_event = parse_track_event(&mut scanner, &mut running_status)?;
-                    track_events.push(track_event);
+                    let event = parse_event(&mut scanner, &mut running_status)?;
+                    events.push(event);
                 }
 
-                Ok(TrackChunk(track_events))
+                Ok(TrackChunk(events))
             }
             _ => Err(TryFromChunkError::InvalidChunkType),
         }
@@ -87,7 +92,7 @@ impl TryFrom<&Chunk> for TrackChunk {
 
 /// Parses a single track event from the scanner, including delta time and event
 /// data. Updates the running status as needed based on the event type.
-fn parse_track_event(
+fn parse_event(
     scanner: &mut Scanner,
     running_status: &mut Option<u8>,
 ) -> Result<TrackEvent, TryFromChunkError> {
@@ -95,41 +100,43 @@ fn parse_track_event(
         .eat_variable_length_quantity()
         .ok_or(TryFromChunkError::InvalidVLQ)?;
 
-    let event_kind_byte = scanner.peek().ok_or(TryFromChunkError::InvalidStatusByte)?;
+    let kind_byte = scanner.peek().ok_or(TryFromChunkError::InvalidStatusByte)?;
 
-    let event_kind = match event_kind_byte {
+    let kind = match kind_byte {
         0xFF => {
             scanner.eat();
             *running_status = None; // TIPS: Reset for not MIDI event
             parse_meta_event(scanner)?
         }
-        0xF0 | 0xF7 => {
+        0xF0 => {
             scanner.eat();
             *running_status = None; // TIPS: Reset for not MIDI event
-            parse_system_exclusive_event(scanner, event_kind_byte)?
+            parse_system_exclusive_event(scanner, SystemExclusiveEventKind::F0)?
         }
-        status_byte if status_byte >= 0x80 => {
+        0xF7 => {
             scanner.eat();
-            *running_status = Some(status_byte); // TIPS: Set for MIDI event
-            parse_midi_event(scanner, status_byte)?
+            *running_status = None; // TIPS: Reset for not MIDI event
+            parse_system_exclusive_event(scanner, SystemExclusiveEventKind::F7)?
+        }
+        status if status >= 0x80 => {
+            scanner.eat();
+            *running_status = Some(status); // TIPS: Set for MIDI event
+            parse_midi_event(scanner, status)?
         }
         _ => {
-            let status_byte = running_status.ok_or(TryFromChunkError::InvalidRunningStatus)?; // TIPS: Use for MIDI event
-            parse_midi_event(scanner, status_byte)?
+            let status = running_status.ok_or(TryFromChunkError::InvalidRunningStatus)?; // TIPS: Use for MIDI event
+            parse_midi_event(scanner, status)?
         }
     };
 
-    Ok(TrackEvent {
-        delta_time,
-        event_kind,
-    })
+    Ok(TrackEvent { delta_time, kind })
 }
 
 /// Specifies non-MIDI information useful to this format or to sequencers, with
 /// this syntax: `FF <type> <length> <bytes>`
 fn parse_meta_event(scanner: &mut Scanner) -> Result<EventKind, TryFromChunkError> {
-    let status_byte = scanner.eat().ok_or(TryFromChunkError::InvalidStatusByte)?;
-    debug_assert!(status_byte < 128);
+    let status = scanner.eat().ok_or(TryFromChunkError::InvalidStatusByte)?;
+    debug_assert!(status < 128);
 
     let length = scanner
         .eat_variable_length_quantity()
@@ -139,12 +146,12 @@ fn parse_meta_event(scanner: &mut Scanner) -> Result<EventKind, TryFromChunkErro
         .eat_vec(length as usize)
         .ok_or(TryFromChunkError::InvalidData)?;
 
-    Ok(EventKind::Meta { status_byte, data })
+    Ok(EventKind::Meta { status, data })
 }
 
 fn parse_system_exclusive_event(
     scanner: &mut Scanner,
-    event_kind_byte: u8,
+    kind: SystemExclusiveEventKind,
 ) -> Result<EventKind, TryFromChunkError> {
     let length = scanner
         .eat_variable_length_quantity()
@@ -154,19 +161,12 @@ fn parse_system_exclusive_event(
         .eat_vec(length as usize)
         .ok_or(TryFromChunkError::InvalidData)?;
 
-    Ok(EventKind::SystemExclusive {
-        event_kind_byte,
-        length,
-        data,
-    })
+    Ok(EventKind::SystemExclusive { kind, length, data })
 }
 
-fn parse_midi_event(
-    scanner: &mut Scanner,
-    status_byte: u8,
-) -> Result<EventKind, TryFromChunkError> {
+fn parse_midi_event(scanner: &mut Scanner, status: u8) -> Result<EventKind, TryFromChunkError> {
     // TODO: It's true?
-    let data_len = match status_byte & 0xF0 {
+    let data_len = match status & 0xF0 {
         0xC0 | 0xD0 => 1, // Program Change, Channel Pressure
         _ => 2,
     };
@@ -174,5 +174,5 @@ fn parse_midi_event(
         .eat_vec(data_len)
         .ok_or(TryFromChunkError::InvalidData)?;
 
-    Ok(EventKind::MIDI { status_byte, data })
+    Ok(EventKind::MIDI { status, data })
 }
