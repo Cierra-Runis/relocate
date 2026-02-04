@@ -32,7 +32,7 @@ pub struct TrackEvent {
     pub kind: EventKind,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EventKind {
     Meta {
         status: u8,
@@ -40,8 +40,6 @@ pub enum EventKind {
     },
     SystemExclusive {
         kind: SystemExclusiveEventKind,
-        /// The length is stored as a variable-length quantity.
-        length: u32,
         data: Vec<u8>,
     },
     MIDI {
@@ -50,7 +48,7 @@ pub enum EventKind {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SystemExclusiveEventKind {
     F0,
     F7,
@@ -136,7 +134,7 @@ fn parse_event(
 /// this syntax: `FF <type> <length> <bytes>`
 fn parse_meta_event(scanner: &mut Scanner) -> Result<EventKind, TryFromChunkError> {
     let status = scanner.eat().ok_or(TryFromChunkError::InvalidStatusByte)?;
-    debug_assert!(status < 128);
+    debug_assert!(status < 0x80);
 
     let length = scanner
         .eat_variable_length_quantity()
@@ -145,6 +143,8 @@ fn parse_meta_event(scanner: &mut Scanner) -> Result<EventKind, TryFromChunkErro
     let data = scanner
         .eat_vec(length as usize)
         .ok_or(TryFromChunkError::InvalidData)?;
+
+    debug_assert_eq!(data.len() as u32, length);
 
     Ok(EventKind::Meta { status, data })
 }
@@ -161,7 +161,9 @@ fn parse_system_exclusive_event(
         .eat_vec(length as usize)
         .ok_or(TryFromChunkError::InvalidData)?;
 
-    Ok(EventKind::SystemExclusive { kind, length, data })
+    debug_assert_eq!(data.len() as u32, length);
+
+    Ok(EventKind::SystemExclusive { kind, data })
 }
 
 fn parse_midi_event(scanner: &mut Scanner, status: u8) -> Result<EventKind, TryFromChunkError> {

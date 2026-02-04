@@ -24,7 +24,7 @@ impl<'a> Scanner<'a> {
 
     /// The subslice after the cursor.
     #[inline]
-    fn after(&self) -> &'a [u8] {
+    pub fn after(&self) -> &'a [u8] {
         // Safety: cursor is always in [0, bytes.len()].
         debug_assert!(self.cursor <= self.bytes.len());
         unsafe { self.bytes.get_unchecked(self.cursor..) }

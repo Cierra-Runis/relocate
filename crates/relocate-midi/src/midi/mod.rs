@@ -25,13 +25,13 @@ pub enum TryFromMIDIFileError {
     TruncatedChunkData,
 }
 
-impl TryFrom<MIDIFile> for Vec<Chunk> {
+impl TryFrom<&MIDIFile> for Vec<Chunk> {
     type Error = TryFromMIDIFileError;
 
     /// [MIDI File](MIDIFile)s are made up of [chunk](Chunk)s.
-    fn try_from(midi_file: MIDIFile) -> Result<Self, Self::Error> {
+    fn try_from(midi_file: &MIDIFile) -> Result<Self, Self::Error> {
         let mut chunks = Vec::new();
-        let mut scanner = Scanner::new(&midi_file);
+        let mut scanner = Scanner::new(midi_file);
 
         while !scanner.done() {
             // Each chunk needs at least 8 bytes (4 for kind + 4 for length)
