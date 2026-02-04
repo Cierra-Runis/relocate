@@ -1,13 +1,13 @@
 pub mod format;
 
-use derive_more::Debug;
+use derive_more::{Debug, Deref};
 
 use crate::chunk::{Chunk, ChunkKind};
 use crate::scanner::Scanner;
 
 /// To any file system, a [MIDI File](MIDIFile)
 /// is simply a [series of 8-bit bytes](Vec<u8>).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deref)]
 #[debug("{}", pretty_hex::pretty_hex(_0))]
 pub struct MIDIFile(Vec<u8>);
 
@@ -31,7 +31,7 @@ impl TryFrom<MIDIFile> for Vec<Chunk> {
     /// [MIDI File](MIDIFile)s are made up of [chunk](Chunk)s.
     fn try_from(midi_file: MIDIFile) -> Result<Self, Self::Error> {
         let mut chunks = Vec::new();
-        let mut scanner = Scanner::new(&midi_file.0);
+        let mut scanner = Scanner::new(&midi_file);
 
         while !scanner.done() {
             // Each chunk needs at least 8 bytes (4 for kind + 4 for length)

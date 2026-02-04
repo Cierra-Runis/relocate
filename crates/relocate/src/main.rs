@@ -19,10 +19,7 @@ fn main() {
                         Err(e) => eprintln!("Error parsing Header chunk: {:?}", e),
                     },
                     ChunkKind::Track(_) => match TrackChunk::try_from(&chunk) {
-                        Ok(chunk) => println!(
-                            "Found a Track chunk with {:?} events",
-                            chunk.track_events.len()
-                        ),
+                        Ok(chunk) => println!("Found a Track chunk: {:?}", chunk),
                         Err(e) => eprintln!("Error parsing Track chunk: {:?}", e),
                     },
                     ChunkKind::Alien(_) => {

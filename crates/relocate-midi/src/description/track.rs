@@ -1,4 +1,4 @@
-use derive_more::Debug;
+use derive_more::{Debug, Deref};
 
 use crate::{
     chunk::{Chunk, ChunkKind},
@@ -11,10 +11,8 @@ use crate::{
 ///
 /// The format for Track Chunks (described below) is exactly the same for all
 /// three formats (0, 1, and 2: see "Header Chunk" above) of MIDI Files.
-#[derive(Debug)]
-pub struct TrackChunk {
-    pub track_events: Vec<TrackEvent>,
-}
+#[derive(Debug, Deref)]
+pub struct TrackChunk(Vec<TrackEvent>);
 
 #[derive(Debug)]
 pub struct TrackEvent {
@@ -149,7 +147,7 @@ impl TryFrom<&Chunk> for TrackChunk {
                     track_events.push(TrackEvent { delta_time, event });
                 }
 
-                Ok(TrackChunk { track_events })
+                Ok(TrackChunk(track_events))
             }
             _ => Err(TryFromChunkError::InvalidChunkType),
         }
