@@ -24,26 +24,7 @@ fn main() {
                         Err(e) => eprintln!("Error parsing Header chunk: {:?}", e),
                     },
                     ChunkKind::Track(_) => match TrackChunk::try_from(&chunk) {
-                        Ok(chunk) => {
-                            for event in chunk.iter() {
-                                match event.kind {
-                                    EventKind::Meta { .. } => {
-                                        match MetaEvent::try_from(&event.kind) {
-                                            Ok(event) => {
-                                                println!("Found a Meta event: {:?}", event)
-                                            }
-                                            Err(e) => {
-                                                eprintln!("Error parsing Meta event: {:?}", e)
-                                            }
-                                        }
-                                    }
-                                    EventKind::SystemExclusive { .. } => {
-                                        println!("Found a System Exclusive event")
-                                    }
-                                    EventKind::MIDI { .. } => {}
-                                }
-                            }
-                        }
+                        Ok(chunk) => print_track_chunk(&chunk),
                         Err(e) => eprintln!("Error parsing Track chunk: {:?}", e),
                     },
                     ChunkKind::Alien(_) => {
@@ -53,5 +34,24 @@ fn main() {
             }
         }
         Err(e) => eprintln!("Error parsing MIDI file: {:?}", e),
+    }
+}
+
+fn print_track_chunk(chunk: &TrackChunk) {
+    for event in chunk.iter() {
+        match event.kind {
+            EventKind::Meta { .. } => match MetaEvent::try_from(&event.kind) {
+                Ok(event) => {
+                    println!("Found a Meta event: {:?}", event)
+                }
+                Err(e) => {
+                    eprintln!("Error parsing Meta event: {:?}", e)
+                }
+            },
+            EventKind::SystemExclusive { .. } => {
+                println!("Found a System Exclusive event")
+            }
+            EventKind::MIDI { .. } => {}
+        }
     }
 }
