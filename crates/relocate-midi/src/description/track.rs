@@ -38,7 +38,7 @@ pub enum EventKind {
         status_byte: u8,
         data: Vec<u8>,
     },
-    SystemExclude {
+    SystemExclusive {
         /// `0xF0` or `0xF7`.
         event_kind_byte: u8,
         /// The length is stored as a variable-length quantity.
@@ -74,43 +74,8 @@ impl TryFrom<&Chunk> for TrackChunk {
                 let mut running_status: Option<u8> = None;
 
                 while !scanner.done() {
-                    let delta_time = scanner
-                        .eat_variable_length_quantity()
-                        .ok_or(TryFromChunkError::InvalidVLQ)?;
-
-                    let event_kind_byte =
-                        scanner.peek().ok_or(TryFromChunkError::InvalidStatusByte)?;
-
-                    let event_kind = match event_kind_byte {
-                        0xFF => {
-                            scanner.eat();
-
-                            running_status = None; // TIPS: Reset for not MIDI event
-                            parse_meta_event(&mut scanner)?
-                        }
-                        0xF0 | 0xF7 => {
-                            scanner.eat();
-
-                            running_status = None; // TIPS: Reset for not MIDI event
-                            parse_system_exclusive_event(&mut scanner, event_kind_byte)?
-                        }
-                        status_byte if status_byte >= 0x80 => {
-                            scanner.eat();
-                            running_status = Some(status_byte); // TIPS: Set for MIDI event
-                            parse_midi_event(&mut scanner, status_byte)?
-                        }
-                        _ => {
-                            // TIPS: Use for MIDI event
-                            let status_byte =
-                                running_status.ok_or(TryFromChunkError::InvalidRunningStatus)?;
-                            parse_midi_event(&mut scanner, status_byte)?
-                        }
-                    };
-
-                    track_events.push(TrackEvent {
-                        delta_time,
-                        event_kind,
-                    });
+                    let track_event = parse_track_event(&mut scanner, &mut running_status)?;
+                    track_events.push(track_event);
                 }
 
                 Ok(TrackChunk(track_events))
@@ -118,6 +83,46 @@ impl TryFrom<&Chunk> for TrackChunk {
             _ => Err(TryFromChunkError::InvalidChunkType),
         }
     }
+}
+
+/// Parses a single track event from the scanner, including delta time and event
+/// data. Updates the running status as needed based on the event type.
+fn parse_track_event(
+    scanner: &mut Scanner,
+    running_status: &mut Option<u8>,
+) -> Result<TrackEvent, TryFromChunkError> {
+    let delta_time = scanner
+        .eat_variable_length_quantity()
+        .ok_or(TryFromChunkError::InvalidVLQ)?;
+
+    let event_kind_byte = scanner.peek().ok_or(TryFromChunkError::InvalidStatusByte)?;
+
+    let event_kind = match event_kind_byte {
+        0xFF => {
+            scanner.eat();
+            *running_status = None; // TIPS: Reset for not MIDI event
+            parse_meta_event(scanner)?
+        }
+        0xF0 | 0xF7 => {
+            scanner.eat();
+            *running_status = None; // TIPS: Reset for not MIDI event
+            parse_system_exclusive_event(scanner, event_kind_byte)?
+        }
+        status_byte if status_byte >= 0x80 => {
+            scanner.eat();
+            *running_status = Some(status_byte); // TIPS: Set for MIDI event
+            parse_midi_event(scanner, status_byte)?
+        }
+        _ => {
+            let status_byte = running_status.ok_or(TryFromChunkError::InvalidRunningStatus)?; // TIPS: Use for MIDI event
+            parse_midi_event(scanner, status_byte)?
+        }
+    };
+
+    Ok(TrackEvent {
+        delta_time,
+        event_kind,
+    })
 }
 
 /// Specifies non-MIDI information useful to this format or to sequencers, with
@@ -149,7 +154,7 @@ fn parse_system_exclusive_event(
         .eat_vec(length as usize)
         .ok_or(TryFromChunkError::InvalidData)?;
 
-    Ok(EventKind::SystemExclude {
+    Ok(EventKind::SystemExclusive {
         event_kind_byte,
         length,
         data,
