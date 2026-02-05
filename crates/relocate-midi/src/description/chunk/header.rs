@@ -92,7 +92,7 @@ impl TryFrom<&Chunk> for HeaderChunk {
 
     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
         match &chunk.kind {
-            ChunkKind::Header(_) => {
+            ChunkKind::Header => {
                 let mut scanner = Scanner::new(&chunk.data);
 
                 let format_bytes = scanner

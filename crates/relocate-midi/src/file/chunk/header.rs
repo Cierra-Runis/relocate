@@ -2,7 +2,7 @@ use derive_more::{Debug, Display, Error};
 
 use crate::file::chunk::ChunkFile;
 
-const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
+pub const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
 
 #[derive(Debug)]
 pub struct HeaderChunkFile {

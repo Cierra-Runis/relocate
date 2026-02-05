@@ -68,7 +68,7 @@ impl TryFrom<&Chunk> for TrackChunk {
 
     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
         match &chunk.kind {
-            ChunkKind::Track(_) => {
+            ChunkKind::Track => {
                 let mut events = Vec::new();
                 let mut scanner = Scanner::new(&chunk.data);
 

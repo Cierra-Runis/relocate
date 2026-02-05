@@ -2,7 +2,7 @@ use derive_more::{Debug, Display, Error};
 
 use crate::file::chunk::ChunkFile;
 
-const TRACK_CHUNK_KIND: &[u8; 4] = b"MTrk";
+pub const TRACK_CHUNK_KIND: &[u8; 4] = b"MTrk";
 
 #[derive(Debug)]
 pub struct TrackChunkFile<'a> {
