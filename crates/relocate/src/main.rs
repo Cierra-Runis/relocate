@@ -11,7 +11,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for chunk_file in ChunksFile::try_from(&midi_file)? {
         match Chunk::try_from(&chunk_file)? {
             Chunk::Header(chunk) => println!("Header Chunk: {:?}", chunk),
-            Chunk::Track(chunk) => println!("Track Chunk: {} events", chunk.len()),
+            Chunk::Track(chunk) => {
+                for event in chunk {
+                    println!("Track Event: {:?}", event);
+                }
+            }
             Chunk::Alien(chunk_file) => println!("Alien Chunk: {:?}", chunk_file),
         }
     }

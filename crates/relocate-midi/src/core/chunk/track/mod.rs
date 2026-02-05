@@ -1,6 +1,6 @@
 pub mod event;
 
-use derive_more::{Debug, Deref, Display, Error};
+use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
 use crate::{
     core::chunk::track::event::{SystemExclusiveEventKind, TrackEvent, TrackEventKind},
@@ -14,7 +14,7 @@ use crate::{
 ///
 /// The format for Track Chunks (described below) is exactly the same for all
 /// three formats (0, 1, and 2: see "Header Chunk" above) of MIDI Files.
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, IntoIterator)]
 pub struct TrackChunk(Vec<TrackEvent>);
 
 #[derive(Debug, Display, Error)]
