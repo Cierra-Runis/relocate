@@ -1,7 +1,7 @@
 pub mod division;
 pub mod format;
 
-use derive_more::Debug;
+use derive_more::{Debug, Display, Error};
 
 use crate::{
     core::chunk::header::{division::Division, format::Format},
@@ -22,7 +22,7 @@ pub struct HeaderChunk {
     pub division: Division,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display, Error)]
 pub enum TryFromError {
     InvalidFormat,
     InvalidDivision,

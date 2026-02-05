@@ -36,10 +36,10 @@ pub enum TryFromError {
     ScannerNotDone,
 }
 
-impl<'a> TryFrom<ChunkFile<'a>> for HeaderChunkFile {
+impl<'a> TryFrom<&ChunkFile<'a>> for HeaderChunkFile {
     type Error = TryFromError;
 
-    fn try_from(value: ChunkFile<'a>) -> Result<Self, Self::Error> {
+    fn try_from(value: &ChunkFile<'a>) -> Result<Self, Self::Error> {
         if &value.kind != HEADER_CHUNK_KIND {
             return Err(TryFromError::InvalidKind);
         }
