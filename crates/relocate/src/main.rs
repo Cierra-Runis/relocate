@@ -1,29 +1,13 @@
-use relocate_midi::file::midi::MIDIFile;
+use relocate_midi::file::{chunk::ChunksFile, midi::MIDIFile};
 use std::fs;
 
-fn main() {
-    let path = "./assets/Lapis Lazuli.mid";
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let path = "./assets/World Vanquisher.mid";
     let bytes = fs::read(path).expect("Failed to read MIDI file");
     let midi_file = MIDIFile::from(bytes);
-
-    println!("{}", midi_file);
+    let chunks_file = ChunksFile::try_from(&midi_file)?;
+    for chunk_file in chunks_file.iter() {
+        println!("{:?}", chunk_file);
+    }
+    Ok(())
 }
-
-// fn print_track_chunk(chunk: &TrackChunk) {
-//     for event in chunk.iter() {
-//         match event.kind {
-//             EventKind::Meta { .. } => match MetaEvent::try_from(&event.kind)
-// {                 Ok(event) => {
-//                     println!("Found a Meta event: {:?}", event)
-//                 }
-//                 Err(e) => {
-//                     eprintln!("Error parsing Meta event: {:?}", e)
-//                 }
-//             },
-//             EventKind::SystemExclusive { .. } => {
-//                 println!("Found a System Exclusive event")
-//             }
-//             EventKind::MIDI { .. } => {}
-//         }
-//     }
-// }
