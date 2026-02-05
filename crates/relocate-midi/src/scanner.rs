@@ -5,7 +5,7 @@ pub struct Scanner<'a> {
     bytes: &'a [u8],
 
     /// The index at which we currently are. To guarantee safety, it must always
-    /// hold that: `0 <= cursor <= bytes.len()`.
+    /// hold that cursor in `[0, bytes.len()]`.
     cursor: usize,
 }
 
@@ -25,14 +25,16 @@ impl<'a> Scanner<'a> {
     /// The subslice after the cursor.
     #[inline]
     fn after(&self) -> &'a [u8] {
-        // Safety: cursor is always in [0, bytes.len()].
+        // SAFETY: cursor is always in `[0, bytes.len()]`.
         debug_assert!(self.cursor <= self.bytes.len());
         unsafe { self.bytes.get_unchecked(self.cursor..) }
     }
 }
 
 impl<'a> Scanner<'a> {
-    /// The byte right behind the cursor.
+    /// Peek at the byte right behind the cursor without consuming it.
+    ///
+    /// If there are no bytes left, returns `None`.
     #[inline]
     pub fn peek(&self) -> Option<u8> {
         self.after().first().cloned()
@@ -49,6 +51,8 @@ impl<'a> Scanner<'a> {
         Some(peeked)
     }
 
+    /// Consume and return exactly `n` bytes as a borrowed slice.
+    #[inline]
     pub fn eat_slice(&mut self, n: usize) -> Option<&'a [u8]> {
         if self.cursor + n > self.bytes.len() {
             return None;
@@ -92,6 +96,12 @@ impl Scanner<'_> {
         Some(u32::from_be_bytes(bytes))
     }
 
+    /// Consume and return a variable-length quantity as defined in the MIDI
+    /// Specification.
+    ///
+    /// If the variable-length quantity is malformed (e.g., incomplete or
+    /// exceeds the maximum size), returns `None`.
+    #[inline]
     pub fn eat_variable_length_quantity(&mut self) -> Option<u32> {
         let mut value: u32 = 0;
         for _ in 0..4 {
