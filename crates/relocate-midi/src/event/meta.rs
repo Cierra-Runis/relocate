@@ -186,7 +186,6 @@ pub enum TryFromEventKindError {
     InvalidNumber,
     InvalidData,
     InvalidScannerState,
-    InvalidTextEncoding,
     #[debug("\"{}\"", [*_0].hex_dump().to_string())]
     InvalidStatus(u8),
 }
