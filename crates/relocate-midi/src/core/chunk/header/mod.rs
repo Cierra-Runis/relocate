@@ -4,7 +4,7 @@ pub mod format;
 use derive_more::Debug;
 
 use crate::{
-    description::chunk::header::{division::Division, format::Format},
+    core::chunk::header::{division::Division, format::Format},
     file::chunk::header::HeaderChunkFile,
 };
 

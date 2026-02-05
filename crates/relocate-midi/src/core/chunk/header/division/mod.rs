@@ -1,4 +1,4 @@
-use crate::description::chunk::header::division::fps::{FPS, TryFromError};
+use crate::core::chunk::header::division::fps::{FPS, TryFromError};
 
 pub mod fps;
 

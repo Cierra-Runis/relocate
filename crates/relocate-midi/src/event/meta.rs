@@ -1,7 +1,7 @@
 use derive_more::Debug;
 use pretty_hex::PrettyHex;
 
-use crate::{description::chunk::track::EventKind, scanner::Scanner};
+use crate::{core::chunk::track::EventKind, scanner::Scanner};
 
 /// In the syntax descriptions for each of the meta-events a set of conventions
 /// is used to describe parameters of the events. The FF which begins each
