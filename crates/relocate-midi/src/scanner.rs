@@ -24,7 +24,7 @@ impl<'a> Scanner<'a> {
 
     /// The subslice after the cursor.
     #[inline]
-    pub fn after(&self) -> &'a [u8] {
+    fn after(&self) -> &'a [u8] {
         // Safety: cursor is always in [0, bytes.len()].
         debug_assert!(self.cursor <= self.bytes.len());
         unsafe { self.bytes.get_unchecked(self.cursor..) }
@@ -32,12 +32,6 @@ impl<'a> Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    /// Check if there are at least N bytes remaining.
-    #[inline]
-    pub fn has_bytes(&self, n: usize) -> bool {
-        self.cursor + n <= self.bytes.len()
-    }
-
     /// The byte right behind the cursor.
     #[inline]
     pub fn peek(&self) -> Option<u8> {
@@ -55,40 +49,47 @@ impl<'a> Scanner<'a> {
         Some(peeked)
     }
 
-    /// Consume and return exactly N bytes as an array.
-    #[inline]
-    pub fn eat_bytes<const N: usize>(&mut self) -> Option<[u8; N]> {
-        if !self.has_bytes(N) {
+    pub fn eat_slice(&mut self, n: usize) -> Option<&'a [u8]> {
+        if self.cursor + n > self.bytes.len() {
             return None;
         }
-        let result = self.bytes[self.cursor..self.cursor + N].try_into().ok()?;
-        self.cursor += N;
+        let result = &self.bytes[self.cursor..self.cursor + n];
+        self.cursor += n;
         Some(result)
     }
 
-    /// Consume and return exactly N bytes as a Vec.
+    /// Consume and return exactly `n` bytes as an owned `Vec<u8>`.
     #[inline]
     pub fn eat_vec(&mut self, n: usize) -> Option<Vec<u8>> {
-        if !self.has_bytes(n) {
-            return None;
-        }
-        let result = self.bytes[self.cursor..self.cursor + n].to_vec();
-        self.cursor += n;
-        Some(result)
+        self.eat_slice(n).map(|s| s.to_vec())
+    }
+
+    /// Consume and return exactly N bytes as a borrowed array.
+    #[inline]
+    pub fn eat_bytes<const N: usize>(&mut self) -> Option<&'a [u8; N]> {
+        self.eat_slice(N)?.try_into().ok()
+    }
+
+    /// Consume and return exactly N bytes as an owned array.
+    #[inline]
+    pub fn eat_array<const N: usize>(&mut self) -> Option<[u8; N]> {
+        self.eat_bytes::<N>().copied()
+    }
+}
+
+impl Scanner<'_> {
+    /// Consume and return a u16 in big-endian format.
+    #[inline]
+    pub fn eat_u16_be(&mut self) -> Option<u16> {
+        let bytes = self.eat_array::<2>()?;
+        Some(u16::from_be_bytes(bytes))
     }
 
     /// Consume and return a u32 in big-endian format.
     #[inline]
     pub fn eat_u32_be(&mut self) -> Option<u32> {
-        let bytes = self.eat_bytes::<4>()?;
+        let bytes = self.eat_array::<4>()?;
         Some(u32::from_be_bytes(bytes))
-    }
-
-    /// Consume and return a u16 in big-endian format.
-    #[inline]
-    pub fn eat_u16_be(&mut self) -> Option<u16> {
-        let bytes = self.eat_bytes::<2>()?;
-        Some(u16::from_be_bytes(bytes))
     }
 
     pub fn eat_variable_length_quantity(&mut self) -> Option<u32> {

@@ -63,12 +63,12 @@ pub enum ChunkKind {
     Alien([u8; 4]),
 }
 
-impl From<[u8; 4]> for ChunkKind {
-    fn from(bytes: [u8; 4]) -> Self {
-        match &bytes {
-            b"MThd" => ChunkKind::Header(bytes),
-            b"MTrk" => ChunkKind::Track(bytes),
-            _ => ChunkKind::Alien(bytes),
+impl From<&[u8; 4]> for ChunkKind {
+    fn from(bytes: &[u8; 4]) -> Self {
+        match bytes {
+            b"MThd" => ChunkKind::Header(*bytes),
+            b"MTrk" => ChunkKind::Track(*bytes),
+            _ => ChunkKind::Alien(*bytes),
         }
     }
 }

@@ -247,7 +247,7 @@ impl TryFrom<&EventKind> for MetaEvent {
                     0x51 => {
                         let mut scanner = Scanner::new(data);
                         let [t1, t2, t3] = scanner
-                            .eat_bytes::<0x03>()
+                            .eat_array::<0x03>()
                             .ok_or(TryFromEventKindError::InvalidData)?;
                         let tempo = u32::from_be_bytes([0x00, t1, t2, t3]);
                         if !scanner.done() {
@@ -259,7 +259,7 @@ impl TryFrom<&EventKind> for MetaEvent {
                     0x54 => {
                         let mut scanner = Scanner::new(data);
                         let [hours, minutes, seconds, frames, fractional_frames] = scanner
-                            .eat_bytes::<0x05>()
+                            .eat_array::<0x05>()
                             .ok_or(TryFromEventKindError::InvalidData)?;
                         if !scanner.done() {
                             return Err(TryFromEventKindError::InvalidScannerState);
@@ -276,7 +276,7 @@ impl TryFrom<&EventKind> for MetaEvent {
                     0x58 => {
                         let mut scanner = Scanner::new(data);
                         let [numerator, denominator, cc, bb] = scanner
-                            .eat_bytes::<0x04>()
+                            .eat_array::<0x04>()
                             .ok_or(TryFromEventKindError::InvalidData)?;
                         if !scanner.done() {
                             return Err(TryFromEventKindError::InvalidScannerState);

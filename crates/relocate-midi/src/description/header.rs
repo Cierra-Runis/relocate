@@ -96,7 +96,7 @@ impl TryFrom<&Chunk> for HeaderChunk {
                 let mut scanner = Scanner::new(&chunk.data);
 
                 let format_bytes = scanner
-                    .eat_bytes::<2>()
+                    .eat_array::<2>()
                     .ok_or(TryFromChunkError::MalformedMIDIFormat)?;
                 let format = MIDIFormat::try_from(format_bytes)
                     .map_err(|_| TryFromChunkError::MalformedMIDIFormat)?;
@@ -115,7 +115,7 @@ impl TryFrom<&Chunk> for HeaderChunk {
 
                 // Read division (2 bytes)
                 let division_bytes = scanner
-                    .eat_bytes::<2>()
+                    .eat_array::<2>()
                     .ok_or(TryFromChunkError::MalformedDivision)?;
                 let division = Division::try_from(division_bytes)
                     .map_err(|_| TryFromChunkError::MalformedDivision)?;
