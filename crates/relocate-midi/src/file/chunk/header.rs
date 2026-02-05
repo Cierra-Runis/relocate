@@ -3,13 +3,14 @@ use derive_more::{Debug, Display, Error};
 use crate::file::chunk::ChunkFile;
 
 pub const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
+pub const HEADER_CHUNK_LENGTH: &u32 = &6;
 
 #[derive(Debug)]
 pub struct HeaderChunkFile {
     kind: &'static [u8; 4],
-    pub length: u32,
+    length: &'static u32,
     pub format: [u8; 2],
-    pub track_count: [u8; 2],
+    pub tracks_count: [u8; 2],
     pub division: [u8; 2],
 }
 
@@ -17,6 +18,11 @@ impl HeaderChunkFile {
     #[inline]
     pub fn kind(&self) -> &[u8; 4] {
         self.kind
+    }
+
+    #[inline]
+    pub fn length(&self) -> &u32 {
+        self.length
     }
 }
 
@@ -45,7 +51,7 @@ impl<'a> TryFrom<ChunkFile<'a>> for HeaderChunkFile {
         let format = scanner
             .eat_array::<2>()
             .ok_or(TryFromError::CouldNotReadFormat)?;
-        let track_count = scanner
+        let tracks_count = scanner
             .eat_array::<2>()
             .ok_or(TryFromError::CouldNotReadTrackCount)?;
         let division = scanner
@@ -58,9 +64,9 @@ impl<'a> TryFrom<ChunkFile<'a>> for HeaderChunkFile {
 
         Ok(HeaderChunkFile {
             kind: HEADER_CHUNK_KIND,
-            length: value.length,
+            length: HEADER_CHUNK_LENGTH,
             format,
-            track_count,
+            tracks_count,
             division,
         })
     }
