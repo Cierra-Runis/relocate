@@ -7,8 +7,11 @@ use crate::{file::midi::MIDIFile, scanner::Scanner};
 
 #[derive(Debug)]
 pub struct ChunkFile<'a> {
+    #[debug("{:?}", String::from_utf8_lossy(kind))]
     pub kind: [u8; 4],
+    #[debug("{:?}", u32::from_be_bytes(*length))]
     pub length: [u8; 4],
+    #[debug(skip)]
     pub data: &'a [u8],
 }
 
