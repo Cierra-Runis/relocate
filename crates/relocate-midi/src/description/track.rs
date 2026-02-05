@@ -1,7 +1,7 @@
 use derive_more::{Debug, Deref};
 
 use crate::{
-    chunk::{Chunk, ChunkKind},
+    description::chunk::{Chunk, ChunkKind},
     scanner::Scanner,
 };
 
