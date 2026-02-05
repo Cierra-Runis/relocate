@@ -13,14 +13,15 @@ pub struct ChunkFile<'a> {
 pub struct ChunksFile<'a>(Vec<ChunkFile<'a>>);
 
 #[derive(Debug, Display, Error)]
-pub enum ChunksFileTryFromError {
+pub enum TryFromError {
     CouldNotReadKind,
     CouldNotReadLength,
     CouldNotReadData,
+    ScannerNotDone,
 }
 
 impl<'a> TryFrom<&'a MIDIFile> for ChunksFile<'a> {
-    type Error = ChunksFileTryFromError;
+    type Error = TryFromError;
 
     fn try_from(value: &'a MIDIFile) -> Result<Self, Self::Error> {
         let mut files = Vec::new();
@@ -29,13 +30,18 @@ impl<'a> TryFrom<&'a MIDIFile> for ChunksFile<'a> {
         while !scanner.done() {
             let kind = scanner
                 .eat_array::<4>()
-                .ok_or(ChunksFileTryFromError::CouldNotReadKind)?;
+                .ok_or(TryFromError::CouldNotReadKind)?;
             let length = scanner
                 .eat_array::<4>()
-                .ok_or(ChunksFileTryFromError::CouldNotReadLength)?;
+                .ok_or(TryFromError::CouldNotReadLength)?;
             let data = scanner
                 .eat_slice(u32::from_be_bytes(length) as usize)
-                .ok_or(ChunksFileTryFromError::CouldNotReadData)?;
+                .ok_or(TryFromError::CouldNotReadData)?;
+
+            if !scanner.done() {
+                return Err(TryFromError::ScannerNotDone);
+            }
+
             files.push(ChunkFile { kind, length, data });
         }
 
