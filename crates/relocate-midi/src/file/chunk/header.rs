@@ -7,7 +7,7 @@ const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
 #[derive(Debug)]
 pub struct HeaderChunkFile {
     kind: &'static [u8; 4],
-    pub length: [u8; 4],
+    pub length: u32,
     pub format: [u8; 2],
     pub track_count: [u8; 2],
     pub division: [u8; 2],
@@ -37,7 +37,7 @@ impl<'a> TryFrom<ChunkFile<'a>> for HeaderChunkFile {
         if &value.kind != HEADER_CHUNK_KIND {
             return Err(TryFromError::InvalidKind);
         }
-        if value.length != [0x00, 0x00, 0x00, 0x06] {
+        if value.length != 6 {
             return Err(TryFromError::InvalidLength);
         }
 
