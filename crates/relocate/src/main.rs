@@ -9,8 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let midi_file = MIDIFile::from(bytes);
 
     for chunk_file in ChunksFile::try_from(&midi_file)? {
-        let chunk = Chunk::try_from(&chunk_file)?;
-        match chunk {
+        match Chunk::try_from(&chunk_file)? {
             Chunk::Header(chunk) => println!("Header Chunk: {:?}", chunk),
             Chunk::Track(chunk) => println!("Track Chunk: {} events", chunk.len()),
             Chunk::Alien(chunk_file) => println!("Alien Chunk: {:?}", chunk_file),
