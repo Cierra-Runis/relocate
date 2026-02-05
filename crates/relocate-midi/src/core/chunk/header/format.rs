@@ -1,4 +1,4 @@
-use derive_more::{Debug, Display, Error};
+use derive_more::{Debug, Display, Eq, Error, PartialEq};
 
 /// We may decide to define other format IDs to support other structures.
 ///
@@ -8,7 +8,7 @@ use derive_more::{Debug, Display, Error};
 ///
 /// Also, more parameters may be added to the MThd chunk in the future: it
 /// is important to read and honor the length, even if it is longer than 6.
-#[derive(Debug)]
+#[derive(Debug, Display, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Format {
     /// The file contains a single multi-channel track.

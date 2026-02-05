@@ -5,13 +5,17 @@ use relocate_midi::{
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "./assets/World Vanquisher.mid";
-    let bytes = fs::read(path).expect("Failed to read MIDI file");
+    let bytes = fs::read("./assets/World Vanquisher.mid").expect("Failed to read MIDI file");
     let midi_file = MIDIFile::from(bytes);
-    let chunks_file = ChunksFile::try_from(&midi_file)?;
-    for chunk_file in chunks_file {
+
+    for chunk_file in ChunksFile::try_from(&midi_file)? {
         let chunk = Chunk::try_from(&chunk_file)?;
-        println!("{:?}", chunk);
+        match chunk {
+            Chunk::Header(chunk) => println!("Header Chunk: {:?}", chunk),
+            Chunk::Track(chunk) => println!("Track Chunk: {} events", chunk.len()),
+            Chunk::Alien(chunk_file) => println!("Alien Chunk: {:?}", chunk_file),
+        }
     }
+
     Ok(())
 }
