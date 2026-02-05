@@ -319,10 +319,10 @@ mod tests {
 
     #[test]
     fn test_meta_event_time_signature() {
-        let data = vec![0x06, 0x03, 0x18, 0x08]; // 6/8 time, 24 clocks per dotted quarter, 8 32nd-notes per quarter
+        // 6/8 time, 24 clocks per dotted quarter, 8 32nd-notes per quarter
         let event_kind = EventKind::Meta {
             status: 0x58,
-            data: data.clone(),
+            data: vec![0x06, 0x03, 0x18, 0x08],
         };
         let meta_event = MetaEvent::try_from(&event_kind).unwrap();
         match meta_event {
