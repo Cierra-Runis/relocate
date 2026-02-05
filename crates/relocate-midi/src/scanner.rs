@@ -96,8 +96,27 @@ impl Scanner<'_> {
         Some(u32::from_be_bytes(bytes))
     }
 
-    /// Consume and return a variable-length quantity as defined in the MIDI
-    /// Specification.
+    /// Consume and return a variable-length quantity slice as defined in the
+    /// MIDI Specification.
+    ///
+    /// If the variable-length quantity is malformed (e.g., incomplete or
+    /// exceeds the maximum size), returns `None`.
+    #[inline]
+    pub fn eat_variable_length_quantity_slice(&mut self) -> Option<&[u8]> {
+        let start_cursor = self.cursor;
+        let mut length = 0;
+        for _ in 0..4 {
+            let byte = self.eat()?;
+            length += 1;
+            if byte & 0x80 == 0 {
+                return Some(&self.bytes[start_cursor..start_cursor + length]);
+            }
+        }
+        None
+    }
+
+    /// Consume and return a variable-length quantity value as defined in the
+    /// MIDI Specification.
     ///
     /// If the variable-length quantity is malformed (e.g., incomplete or
     /// exceeds the maximum size), returns `None`.
@@ -106,7 +125,7 @@ impl Scanner<'_> {
         let mut value: u32 = 0;
         for _ in 0..4 {
             let byte = self.eat()?;
-            value = (value << 7) | (byte as u32 & 0x7F);
+            value = (value << 7) | u32::from(byte & 0x7F);
             if byte & 0x80 == 0 {
                 return Some(value);
             }
