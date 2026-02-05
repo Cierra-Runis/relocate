@@ -4,6 +4,17 @@
 rustup override set nightly
 ```
 
+## Graph
+
+To generate a module dependency graph, run:
+
+```sh
+cargo install cargo-modules
+cargo modules dependencies --package relocate-midi --layout neato --no-externs --no-fns --no-owns > ./target/mods.dot
+```
+
+Then use [GraphvizOnline](https://dreampuf.github.io/GraphvizOnline?engine=neato) to visualize the file.
+
 ## Specification
 
 - [Standard MIDI Files 1.0](https://drive.google.com/file/d/1t4jcCCKoi5HMi7YJ6skvZfKcefLhhOgU/view)
