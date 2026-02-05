@@ -7,7 +7,7 @@ pub const TRACK_CHUNK_KIND: &[u8; 4] = b"MTrk";
 #[derive(Debug)]
 pub struct TrackChunkFile<'a> {
     kind: &'static [u8; 4],
-    pub length: u32,
+    length: u32,
     pub track_events: &'a [u8],
 }
 
@@ -15,6 +15,11 @@ impl TrackChunkFile<'_> {
     #[inline]
     pub fn kind(&self) -> &[u8; 4] {
         self.kind
+    }
+
+    #[inline]
+    pub fn length(&self) -> u32 {
+        self.length
     }
 }
 

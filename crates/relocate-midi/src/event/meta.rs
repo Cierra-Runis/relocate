@@ -1,7 +1,7 @@
 use derive_more::Debug;
 use pretty_hex::PrettyHex;
 
-use crate::{core::chunk::track::EventKind, scanner::Scanner};
+use crate::{core::chunk::track::event::TrackEventKind, scanner::Scanner};
 
 /// In the syntax descriptions for each of the meta-events a set of conventions
 /// is used to describe parameters of the events. The FF which begins each
@@ -190,12 +190,12 @@ pub enum TryFromEventKindError {
     InvalidStatus(u8),
 }
 
-impl TryFrom<&EventKind> for MetaEvent {
+impl TryFrom<&TrackEventKind> for MetaEvent {
     type Error = TryFromEventKindError;
 
-    fn try_from(value: &EventKind) -> Result<Self, Self::Error> {
+    fn try_from(value: &TrackEventKind) -> Result<Self, Self::Error> {
         match value {
-            EventKind::Meta { status, data } => {
+            TrackEventKind::Meta { status, data } => {
                 macro_rules! text_event {
                     ($variant:ident) => {
                         Ok(MetaEvent::$variant(
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_meta_event_time_signature() {
         // 6/8 time, 24 clocks per dotted quarter, 8 32nd-notes per quarter
-        let event_kind = EventKind::Meta {
+        let event_kind = TrackEventKind::Meta {
             status: 0x58,
             data: vec![0x06, 0x03, 0x18, 0x08],
         };

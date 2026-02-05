@@ -1,7 +1,10 @@
-use derive_more::{Debug, Deref};
+pub mod event;
+
+use derive_more::{Debug, Deref, Display, Error};
 
 use crate::{
-    core::chunk::{Chunk, ChunkKind},
+    core::chunk::track::event::{SystemExclusiveEventKind, TrackEvent, TrackEventKind},
+    file::chunk::track::TrackChunkFile,
     scanner::Scanner,
 };
 
@@ -14,91 +17,71 @@ use crate::{
 #[derive(Debug, Deref)]
 pub struct TrackChunk(Vec<TrackEvent>);
 
-#[derive(Debug)]
-pub struct TrackEvent {
-    /// Represents the amount of time before the following event, stored as a
-    /// variable-length quantity.
-    ///
-    /// If the first event in a track occurs at the very beginning of a track,
-    /// or if two events occur simultaneously, a delta-time of zero is used.
-    ///
-    /// Delta-times are _always_ present. (_Not_ storing delta-times of 0
-    /// requires at least two bytes for any other value, and most delta
-    /// times _aren't_ zero.)
-    ///
-    /// Delta-time is in ticks as specified in the header chunk.
-    pub delta_time: u32,
-
-    pub kind: EventKind,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum EventKind {
-    Meta {
-        status: u8,
-        data: Vec<u8>,
-    },
-    SystemExclusive {
-        kind: SystemExclusiveEventKind,
-        data: Vec<u8>,
-    },
-    MIDI {
-        status: u8,
-        data: Vec<u8>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SystemExclusiveEventKind {
-    F0,
-    F7,
-}
-
-#[derive(Debug)]
-pub enum TryFromChunkError {
-    InvalidChunkType,
+#[derive(Debug, Display, Error)]
+pub enum TryFromError {
     InvalidVLQ,
     InvalidStatusByte,
     InvalidData,
     InvalidRunningStatus,
 }
 
-impl TryFrom<&Chunk> for TrackChunk {
-    type Error = TryFromChunkError;
+impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackChunk {
+    type Error = TryFromError;
 
-    fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
-        match &chunk.kind {
-            ChunkKind::Track => {
-                let mut events = Vec::new();
-                let mut scanner = Scanner::new(&chunk.data);
+    fn try_from(value: &TrackChunkFile) -> Result<Self, Self::Error> {
+        let mut events = Vec::new();
+        let mut scanner = Scanner::new(value.track_events);
 
-                // Running status is used: status bytes of MIDI events may be omitted
-                // if the preceding event is a MIDI event with the same status.
-                let mut running_status: Option<u8> = None;
+        // Running status is used: status bytes of MIDI events may be
+        // omitted if the preceding event is a MIDI event with the
+        // same status.
+        let mut running_status: Option<u8> = None;
 
-                while !scanner.done() {
-                    let event = parse_event(&mut scanner, &mut running_status)?;
-                    events.push(event);
-                }
-
-                Ok(TrackChunk(events))
-            }
-            _ => Err(TryFromChunkError::InvalidChunkType),
+        while !scanner.done() {
+            let event = parse_event(&mut scanner, &mut running_status)?;
+            events.push(event);
         }
+
+        Ok(TrackChunk(events))
     }
 }
 
-/// Parses a single track event from the scanner, including delta time and event
-/// data. Updates the running status as needed based on the event type.
+// impl TryFrom<&TrackChunkFile> for TrackChunk {
+//     type Error = TryFromError;
+
+//     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
+//         match &chunk.kind {
+//             ChunkKind::Track => {
+//                 let mut events = Vec::new();
+//                 let mut scanner = Scanner::new(&chunk.data);
+
+//                 // Running status is used: status bytes of MIDI events may be
+// omitted                 // if the preceding event is a MIDI event with the
+// same status.                 let mut running_status: Option<u8> = None;
+
+//                 while !scanner.done() {
+//                     let event = parse_event(&mut scanner, &mut
+// running_status)?;                     events.push(event);
+//                 }
+
+//                 Ok(TrackChunk(events))
+//             }
+//             _ => Err(TryFromError::InvalidChunkType),
+//         }
+//     }
+// }
+
+// Parses a single track event from the scanner, including delta time and event
+// data. Updates the running status as needed based on the event type.
 fn parse_event(
     scanner: &mut Scanner,
     running_status: &mut Option<u8>,
-) -> Result<TrackEvent, TryFromChunkError> {
+) -> Result<TrackEvent, TryFromError> {
     let delta_time = scanner
         .eat_variable_length_quantity()
-        .ok_or(TryFromChunkError::InvalidVLQ)?;
+        .ok_or(TryFromError::InvalidVLQ)?;
 
-    let kind_byte = scanner.peek().ok_or(TryFromChunkError::InvalidStatusByte)?;
+    let kind_byte = scanner.peek().ok_or(TryFromError::InvalidStatusByte)?;
 
     let kind = match kind_byte {
         0xFF => {
@@ -122,7 +105,7 @@ fn parse_event(
             parse_midi_event(scanner, status)?
         }
         _ => {
-            let status = running_status.ok_or(TryFromChunkError::InvalidRunningStatus)?; // TIPS: Use for MIDI event
+            let status = running_status.ok_or(TryFromError::InvalidRunningStatus)?; // TIPS: Use for MIDI event
             parse_midi_event(scanner, status)?
         }
     };
@@ -130,51 +113,49 @@ fn parse_event(
     Ok(TrackEvent { delta_time, kind })
 }
 
-/// Specifies non-MIDI information useful to this format or to sequencers, with
-/// this syntax: `FF <type> <length> <bytes>`
-fn parse_meta_event(scanner: &mut Scanner) -> Result<EventKind, TryFromChunkError> {
-    let status = scanner.eat().ok_or(TryFromChunkError::InvalidStatusByte)?;
+// Specifies non-MIDI information useful to this format or to sequencers, with
+// this syntax: `FF <type> <length> <bytes>`
+fn parse_meta_event(scanner: &mut Scanner) -> Result<TrackEventKind, TryFromError> {
+    let status = scanner.eat().ok_or(TryFromError::InvalidStatusByte)?;
     debug_assert!(status < 0x80);
 
     let length = scanner
         .eat_variable_length_quantity()
-        .ok_or(TryFromChunkError::InvalidVLQ)?;
+        .ok_or(TryFromError::InvalidVLQ)?;
 
     let data = scanner
         .eat_vec(length as usize)
-        .ok_or(TryFromChunkError::InvalidData)?;
+        .ok_or(TryFromError::InvalidData)?;
 
     debug_assert_eq!(data.len() as u32, length);
 
-    Ok(EventKind::Meta { status, data })
+    Ok(TrackEventKind::Meta { status, data })
 }
 
 fn parse_system_exclusive_event(
     scanner: &mut Scanner,
     kind: SystemExclusiveEventKind,
-) -> Result<EventKind, TryFromChunkError> {
+) -> Result<TrackEventKind, TryFromError> {
     let length = scanner
         .eat_variable_length_quantity()
-        .ok_or(TryFromChunkError::InvalidVLQ)?;
+        .ok_or(TryFromError::InvalidVLQ)?;
 
     let data = scanner
         .eat_vec(length as usize)
-        .ok_or(TryFromChunkError::InvalidData)?;
+        .ok_or(TryFromError::InvalidData)?;
 
     debug_assert_eq!(data.len() as u32, length);
 
-    Ok(EventKind::SystemExclusive { kind, data })
+    Ok(TrackEventKind::SystemExclusive { kind, data })
 }
 
-fn parse_midi_event(scanner: &mut Scanner, status: u8) -> Result<EventKind, TryFromChunkError> {
+fn parse_midi_event(scanner: &mut Scanner, status: u8) -> Result<TrackEventKind, TryFromError> {
     // TODO: It's true?
     let data_len = match status & 0xF0 {
         0xC0 | 0xD0 => 1, // Program Change, Channel Pressure
         _ => 2,
     };
-    let data = scanner
-        .eat_vec(data_len)
-        .ok_or(TryFromChunkError::InvalidData)?;
+    let data = scanner.eat_vec(data_len).ok_or(TryFromError::InvalidData)?;
 
-    Ok(EventKind::MIDI { status, data })
+    Ok(TrackEventKind::MIDI { status, data })
 }
