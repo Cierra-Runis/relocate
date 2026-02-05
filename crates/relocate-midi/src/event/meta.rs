@@ -92,10 +92,92 @@ pub enum MetaEvent {
     /// ESEQ file format.
     MIDIChannelPrefix(u8),
 
+    /// Many systems provide a number of separately addressable MIDI ports in
+    /// order to get around bandwidth issues and the 16 MIDI channel limit. This
+    /// optional event specifies the MIDI output port on which data within this
+    /// MTrk chunk will be transmitted.
+    ///
+    /// Naturally, this event should be placed prior to any MIDI events that are
+    /// to be affected. Usually it would be placed at time=0 (i.e. at the start
+    /// of a track), however it is possible to place more than one such event in
+    /// any MTrk chunk, should you wish to output data through a different port
+    /// later in the track.
+    ///
+    /// See: http://www.somascape.org/midi/tech/mfile.html
+    MIDIPort(u8),
+
     /// This event is _not_ optional. It is included so that an exact ending
     /// point may be specified for the track, so that it has an exact length,
     /// which is necessary for tracks which are looped or concatenated.
     EndOfTrack,
+
+    /// This event indicates a tempo change.  Another way of putting
+    /// "microseconds per quarter-note" is "24ths of a microsecond per MIDI
+    /// clock".  Representing tempos as time per beat instead of beat per
+    /// time allows absolutely exact long-term synchronization with
+    /// a time-based sync protocol such as SMPTE time code or MIDI time code.
+    /// This amount of accuracy provided by this tempo resolution allows a
+    /// four-minute piece at 120 beats per minute to be accurate within 500
+    /// usec at the end of the piece.  Ideally, these events should only
+    /// occur where MIDI clocks would be located — this convention is intended
+    /// to guarantee, or at least increase the likelihood, of compatibility
+    /// with other synchronization devices so that a time signature/tempo
+    /// map stored in this format may easily be transferred to another
+    /// device.
+    SetTempo(u32),
+
+    // This event, if present, designates the SMPTE time at which the track chunk is supposed
+    // to start. It should be present at the beginning of the track, that is, before any nonzero
+    // delta-times, and before any transmittable MIDI events. The hour must be encoded with
+    // the SMPTE format, just as it is in MIDI Time Code. In a format 1 file, the SMPTE
+    // Offset must be stored with the tempo map, and has no meaning in any of the other tracks.
+    // The ff field contains fractional frames, in 100ths of a frame, even in SMPTE
+    // based tracks which specify a different frame subdivision for delta-times.
+    SMPTEOffset {
+        hours: u8,
+        minutes: u8,
+        seconds: u8,
+        frames: u8,
+        fractional_frames: u8,
+    },
+
+    /// The time signature is expressed as four numbers.
+    ///
+    /// nn and dd represent the numerator and denominator of the time signature
+    /// as it would be notated.
+    ///
+    /// The denominator is a negative power of two: 2 represents
+    /// a quarter-note, 3 represents an eighth-note, etc.
+    ///
+    /// The cc parameter expresses the number of MIDI clocks in a metronome
+    /// click.
+    ///
+    /// The bb parameter expresses the number of notated 32nd-notes in what MIDI
+    /// thinks of as a quarter-note (24 MIDI Clocks). This was added because
+    /// there are already multiple programs which allow the user to specify
+    /// that what MIDI thinks of as a quarter-note (24 clocks) is to be
+    /// notated as, or related to in terms of, something else.
+    ///
+    /// Therefore, the complete event for 6/8 time, where the metronome clicks
+    /// every three eighth-notes, but there are 24 clocks per quarter-note,
+    /// 72 to the bar, would be (in hex):
+    ///
+    /// `FF 58 04 06 03 24 08`
+    ///
+    /// That is, 6/8 time (8 is 2 to the 3rd power, so this is 06 03), 36 MIDI
+    /// clocks per dotted quarter (24 hex!), and eight notated 32nd-notes
+    /// per MIDI quarter note.
+    TimeSignature {
+        numerator: u8,
+        denominator: u8,
+        midi_clocks_per_metronome_click: u8,
+        thirty_second_notes_per_midi_quarter_note: u8,
+    },
+
+    KeySignature {
+        sharps_flats: i8,
+        major_minor: u8,
+    },
 }
 
 #[derive(Debug)]
@@ -103,6 +185,7 @@ pub enum TryFromEventKindError {
     InvalidEventKind,
     InvalidNumber,
     InvalidData,
+    InvalidScannerState,
     InvalidTextEncoding,
     #[debug("\"{}\"", [*_0].hex_dump().to_string())]
     InvalidStatus(u8),
@@ -115,22 +198,24 @@ impl TryFrom<&EventKind> for MetaEvent {
         match value {
             EventKind::Meta { status, data } => {
                 macro_rules! text_event {
-                    ($variant:ident) => {{
-                        let text = std::str::from_utf8(data)
-                            .map_err(|_| TryFromEventKindError::InvalidTextEncoding)?;
-                        Ok(MetaEvent::$variant(text.to_string()))
-                    }};
+                    ($variant:ident) => {
+                        Ok(MetaEvent::$variant(
+                            String::from_utf8_lossy(data).to_string(),
+                        ))
+                    };
                 }
 
                 match status {
-                    0x00 if data.len() == 2 => {
+                    0x00 => {
                         let mut scanner = Scanner::new(data);
                         let number = scanner
                             .eat_u16_be()
                             .ok_or(TryFromEventKindError::InvalidNumber)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
                         Ok(MetaEvent::SequenceNumber(number))
                     }
-                    0x00 => Err(TryFromEventKindError::InvalidData),
 
                     0x01 | 0x08..0x10 => text_event!(TextEvent),
                     0x02 => text_event!(CopyrightNotice),
@@ -140,24 +225,119 @@ impl TryFrom<&EventKind> for MetaEvent {
                     0x06 => text_event!(Marker),
                     0x07 => text_event!(CuePoint),
 
-                    0x20 if data.len() == 2 => {
+                    0x20 => {
                         let mut scanner = Scanner::new(data);
-                        if scanner.eat() != Some(0x01) {
-                            return Err(TryFromEventKindError::InvalidData);
-                        }
                         let channel = scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
                         Ok(MetaEvent::MIDIChannelPrefix(channel))
                     }
-                    0x20 => Err(TryFromEventKindError::InvalidData),
 
-                    // According to the MIDI specification, `data` should be `[0x00]` here.
-                    // However, some MIDI files omit this byte, so we will accept both.
+                    0x21 => {
+                        let mut scanner = Scanner::new(data);
+                        let port = scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
+                        Ok(MetaEvent::MIDIPort(port))
+                    }
+
                     0x2F => Ok(MetaEvent::EndOfTrack),
+
+                    0x51 => {
+                        let mut scanner = Scanner::new(data);
+                        let [t1, t2, t3] = scanner
+                            .eat_bytes::<0x03>()
+                            .ok_or(TryFromEventKindError::InvalidData)?;
+                        let tempo = u32::from_be_bytes([0x00, t1, t2, t3]);
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
+                        Ok(MetaEvent::SetTempo(tempo))
+                    }
+
+                    0x54 => {
+                        let mut scanner = Scanner::new(data);
+                        let [hours, minutes, seconds, frames, fractional_frames] = scanner
+                            .eat_bytes::<0x05>()
+                            .ok_or(TryFromEventKindError::InvalidData)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
+                        Ok(MetaEvent::SMPTEOffset {
+                            hours,
+                            minutes,
+                            seconds,
+                            frames,
+                            fractional_frames,
+                        })
+                    }
+
+                    0x58 => {
+                        let mut scanner = Scanner::new(data);
+                        let [numerator, denominator, cc, bb] = scanner
+                            .eat_bytes::<0x04>()
+                            .ok_or(TryFromEventKindError::InvalidData)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
+                        Ok(MetaEvent::TimeSignature {
+                            numerator,
+                            denominator,
+                            midi_clocks_per_metronome_click: cc,
+                            thirty_second_notes_per_midi_quarter_note: bb,
+                        })
+                    }
+
+                    0x59 => {
+                        let mut scanner = Scanner::new(data);
+                        let sharps_flats =
+                            scanner.eat().ok_or(TryFromEventKindError::InvalidData)? as i8;
+                        let major_minor =
+                            scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
+                        if !scanner.done() {
+                            return Err(TryFromEventKindError::InvalidScannerState);
+                        }
+                        Ok(MetaEvent::KeySignature {
+                            sharps_flats,
+                            major_minor,
+                        })
+                    }
 
                     status => Err(TryFromEventKindError::InvalidStatus(*status)),
                 }
             }
             _ => Err(TryFromEventKindError::InvalidEventKind),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_meta_event_time_signature() {
+        let data = vec![0x06, 0x03, 0x18, 0x08]; // 6/8 time, 24 clocks per dotted quarter, 8 32nd-notes per quarter
+        let event_kind = EventKind::Meta {
+            status: 0x58,
+            data: data.clone(),
+        };
+        let meta_event = MetaEvent::try_from(&event_kind).unwrap();
+        match meta_event {
+            MetaEvent::TimeSignature {
+                numerator,
+                denominator,
+                midi_clocks_per_metronome_click,
+                thirty_second_notes_per_midi_quarter_note,
+            } => {
+                assert_eq!(numerator, 6);
+                assert_eq!(denominator, 3);
+                assert_eq!(midi_clocks_per_metronome_click, 24);
+                assert_eq!(thirty_second_notes_per_midi_quarter_note, 8);
+            }
+            _ => panic!("Expected TimeSignature meta event"),
         }
     }
 }
