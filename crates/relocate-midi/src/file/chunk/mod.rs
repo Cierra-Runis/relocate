@@ -1,7 +1,7 @@
 pub mod header;
 pub mod track;
 
-use derive_more::{Debug, Deref, Display, Error};
+use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
 use crate::{file::midi::MIDIFile, scanner::Scanner};
 
@@ -14,7 +14,7 @@ pub struct ChunkFile<'a> {
     pub data: &'a [u8],
 }
 
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, IntoIterator)]
 pub struct ChunksFile<'a>(Vec<ChunkFile<'a>>);
 
 #[derive(Debug, Display, Error)]
