@@ -1,3 +1,5 @@
+pub mod header;
+
 use derive_more::{Debug, Deref, Display, Error};
 
 use crate::{file::midi::MIDIFile, scanner::Scanner};
