@@ -1,4 +1,4 @@
-use derive_more::{Debug, PartialEq};
+use derive_more::{Debug, Display, PartialEq};
 
 #[derive(Debug)]
 pub struct TrackEvent {
@@ -18,24 +18,18 @@ pub struct TrackEvent {
     pub kind: TrackEventKind,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Display, Clone, PartialEq)]
 pub enum TrackEventKind {
-    Meta {
-        status: u8,
-        data: Vec<u8>,
-    },
-    SystemExclusive {
-        kind: SystemExclusiveEventKind,
-        data: Vec<u8>,
-    },
-    MIDI {
-        status: u8,
-        data: Vec<u8>,
-    },
+    #[display("Meta")]
+    Meta { status: u8, data: Vec<u8> },
+    #[display("SysEx")]
+    SysEx { kind: SysExEventKind, data: Vec<u8> },
+    #[display("MIDI")]
+    MIDI { status: u8, data: Vec<u8> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum SystemExclusiveEventKind {
+pub enum SysExEventKind {
     F0,
     F7,
 }

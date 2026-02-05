@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Chunk::Header(chunk) => println!("Header Chunk: {:?}", chunk),
             Chunk::Track(chunk) => {
                 for event in chunk {
-                    println!("Track Event: {:?}", event);
+                    println!("Track Event: {}", event.kind);
                 }
             }
             Chunk::Alien(chunk_file) => println!("Alien Chunk: {:?}", chunk_file),

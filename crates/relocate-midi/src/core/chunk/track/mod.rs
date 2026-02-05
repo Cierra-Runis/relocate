@@ -3,7 +3,7 @@ pub mod event;
 use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
 use crate::{
-    core::chunk::track::event::{SystemExclusiveEventKind, TrackEvent, TrackEventKind},
+    core::chunk::track::event::{SysExEventKind, TrackEvent, TrackEventKind},
     file::chunk::track::TrackChunkFile,
     scanner::Scanner,
 };
@@ -92,12 +92,12 @@ fn parse_event(
         0xF0 => {
             scanner.eat();
             *running_status = None; // TIPS: Reset for not MIDI event
-            parse_system_exclusive_event(scanner, SystemExclusiveEventKind::F0)?
+            parse_system_exclusive_event(scanner, SysExEventKind::F0)?
         }
         0xF7 => {
             scanner.eat();
             *running_status = None; // TIPS: Reset for not MIDI event
-            parse_system_exclusive_event(scanner, SystemExclusiveEventKind::F7)?
+            parse_system_exclusive_event(scanner, SysExEventKind::F7)?
         }
         status if status >= 0x80 => {
             scanner.eat();
@@ -134,7 +134,7 @@ fn parse_meta_event(scanner: &mut Scanner) -> Result<TrackEventKind, TryFromErro
 
 fn parse_system_exclusive_event(
     scanner: &mut Scanner,
-    kind: SystemExclusiveEventKind,
+    kind: SysExEventKind,
 ) -> Result<TrackEventKind, TryFromError> {
     let length = scanner
         .eat_variable_length_quantity()
@@ -146,7 +146,7 @@ fn parse_system_exclusive_event(
 
     debug_assert_eq!(data.len() as u32, length);
 
-    Ok(TrackEventKind::SystemExclusive { kind, data })
+    Ok(TrackEventKind::SysEx { kind, data })
 }
 
 fn parse_midi_event(scanner: &mut Scanner, status: u8) -> Result<TrackEventKind, TryFromError> {
