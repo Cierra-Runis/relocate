@@ -41,10 +41,6 @@ impl<'a> TryFrom<&'a MIDIFile> for ChunksFile<'a> {
                 .eat_slice(u32::from_be_bytes(length) as usize)
                 .ok_or(TryFromError::CouldNotReadData)?;
 
-            if !scanner.done() {
-                return Err(TryFromError::ScannerNotDone);
-            }
-
             files.push(ChunkFile { kind, length, data });
         }
 
