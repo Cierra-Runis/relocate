@@ -46,31 +46,6 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackChunk {
     }
 }
 
-// impl TryFrom<&TrackChunkFile> for TrackChunk {
-//     type Error = TryFromError;
-
-//     fn try_from(chunk: &Chunk) -> Result<Self, Self::Error> {
-//         match &chunk.kind {
-//             ChunkKind::Track => {
-//                 let mut events = Vec::new();
-//                 let mut scanner = Scanner::new(&chunk.data);
-
-//                 // Running status is used: status bytes of MIDI events may be
-// omitted                 // if the preceding event is a MIDI event with the
-// same status.                 let mut running_status: Option<u8> = None;
-
-//                 while !scanner.done() {
-//                     let event = parse_event(&mut scanner, &mut
-// running_status)?;                     events.push(event);
-//                 }
-
-//                 Ok(TrackChunk(events))
-//             }
-//             _ => Err(TryFromError::InvalidChunkType),
-//         }
-//     }
-// }
-
 // Parses a single track event from the scanner, including delta time and event
 // data. Updates the running status as needed based on the event type.
 fn parse_event(
