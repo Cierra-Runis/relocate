@@ -2,10 +2,10 @@ use derive_more::{Debug, Display, Error};
 
 use crate::file::chunk::ChunkFile;
 
-const TRACK_HEADER_KIND: &[u8; 4] = b"MThd";
+const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
 
 #[derive(Debug)]
-pub struct TrackHeaderFile {
+pub struct HeaderChunkFile {
     kind: &'static [u8; 4],
     pub length: [u8; 4],
     pub format: [u8; 2],
@@ -13,7 +13,7 @@ pub struct TrackHeaderFile {
     pub division: [u8; 2],
 }
 
-impl TrackHeaderFile {
+impl HeaderChunkFile {
     #[inline]
     pub fn kind(&self) -> &[u8; 4] {
         self.kind
@@ -30,11 +30,11 @@ pub enum TryFromError {
     ScannerNotDone,
 }
 
-impl<'a> TryFrom<ChunkFile<'a>> for TrackHeaderFile {
+impl<'a> TryFrom<ChunkFile<'a>> for HeaderChunkFile {
     type Error = TryFromError;
 
     fn try_from(value: ChunkFile<'a>) -> Result<Self, Self::Error> {
-        if &value.kind != TRACK_HEADER_KIND {
+        if &value.kind != HEADER_CHUNK_KIND {
             return Err(TryFromError::InvalidKind);
         }
         if value.length != [0x00, 0x00, 0x00, 0x06] {
@@ -56,8 +56,8 @@ impl<'a> TryFrom<ChunkFile<'a>> for TrackHeaderFile {
             return Err(TryFromError::ScannerNotDone);
         }
 
-        Ok(TrackHeaderFile {
-            kind: TRACK_HEADER_KIND,
+        Ok(HeaderChunkFile {
+            kind: HEADER_CHUNK_KIND,
             length: value.length,
             format,
             track_count,
