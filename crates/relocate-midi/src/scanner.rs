@@ -54,11 +54,13 @@ impl<'a> Scanner<'a> {
     /// Consume and return exactly `n` bytes as a borrowed slice.
     #[inline]
     pub fn eat_slice(&mut self, n: usize) -> Option<&'a [u8]> {
-        if self.cursor + n > self.bytes.len() {
+        let start_cursor = self.cursor;
+        let end_cursor = start_cursor.checked_add(n)?;
+        if end_cursor > self.bytes.len() {
             return None;
         }
-        let result = &self.bytes[self.cursor..self.cursor + n];
-        self.cursor += n;
+        let result = &self.bytes[start_cursor..end_cursor];
+        self.cursor = end_cursor;
         Some(result)
     }
 
