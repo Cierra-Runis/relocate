@@ -11,7 +11,7 @@ To generate a module dependency graph, run:
 ```sh
 cargo install cargo-modules
 cargo modules dependencies --package relocate-midi --layout dot --no-externs --no-fns --no-uses > ./target/mods-owns.dot
-cargo modules dependencies --package relocate-midi --layout circo --no-externs --no-fns --no-owns > ./target/mods-uses.dot
+cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --no-fns --no-owns > ./target/mods-uses.dot
 cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --no-fns > ./target/mods.dot
 ```
 
