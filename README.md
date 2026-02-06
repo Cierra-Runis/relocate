@@ -15,7 +15,7 @@ cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --
 cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --no-fns > ./target/mods.dot
 ```
 
-Then use [GraphvizOnline](https://dreampuf.github.io/GraphvizOnline?engine=neato) to visualize the file.
+Then use [GraphvizOnline](https://dreampuf.github.io/GraphvizOnline) to visualize the file.
 
 ## Specification
 
