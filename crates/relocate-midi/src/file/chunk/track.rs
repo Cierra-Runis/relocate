@@ -1,6 +1,6 @@
 use derive_more::{Debug, Display, Error};
 
-use crate::file::chunk::ChunkFile;
+use crate::{file::chunk::ChunkFile, scanner::Scanner};
 
 pub const TRACK_CHUNK_KIND: &[u8; 4] = b"MTrk";
 
@@ -35,11 +35,11 @@ impl<'a> TryFrom<&ChunkFile<'a>> for TrackChunkFile<'a> {
     type Error = TryFromError;
 
     fn try_from(value: &ChunkFile<'a>) -> Result<Self, Self::Error> {
-        if &value.kind != TRACK_CHUNK_KIND {
+        if value.kind != TRACK_CHUNK_KIND {
             return Err(TryFromError::InvalidKind);
         }
 
-        let mut scanner = crate::scanner::Scanner::new(value.data);
+        let mut scanner = Scanner::new(value.data);
         let track_events = scanner
             .eat_slice(value.length as usize)
             .ok_or(TryFromError::CouldNotReadVLQ)?;

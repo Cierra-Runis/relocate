@@ -5,6 +5,7 @@ use derive_more::{Debug, Display, Error};
 
 use crate::{
     core::chunk::{header::HeaderChunk, track::TrackChunk},
+    event::file::{self, track::TrackEventsFile},
     file::chunk::{
         ChunkFile,
         header::{HEADER_CHUNK_KIND, HeaderChunkFile},
@@ -46,6 +47,7 @@ pub enum TryFromError {
     HeaderChunkFileConversionError,
     HeaderChunkConversionError,
     TrackChunkFileConversionError,
+    TrackEventsFileConversionError(file::track::TryFromError),
     TrackChunkConversionError,
 }
 
@@ -53,7 +55,7 @@ impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk<'a> {
     type Error = TryFromError;
 
     fn try_from(value: &'a ChunkFile<'a>) -> Result<Self, Self::Error> {
-        match &value.kind {
+        match value.kind {
             HEADER_CHUNK_KIND => {
                 let chunk_file = HeaderChunkFile::try_from(value)
                     .map_err(|_| TryFromError::HeaderChunkFileConversionError)?;
@@ -64,7 +66,9 @@ impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk<'a> {
             TRACK_CHUNK_KIND => {
                 let chunk_file = TrackChunkFile::try_from(value)
                     .map_err(|_| TryFromError::TrackChunkFileConversionError)?;
-                let track_chunk = TrackChunk::try_from(&chunk_file)
+                let events_file = TrackEventsFile::try_from(&chunk_file)
+                    .map_err(TryFromError::TrackEventsFileConversionError)?;
+                let track_chunk = TrackChunk::try_from(&events_file)
                     .map_err(|_| TryFromError::TrackChunkConversionError)?;
                 Ok(Chunk::Track(track_chunk))
             }

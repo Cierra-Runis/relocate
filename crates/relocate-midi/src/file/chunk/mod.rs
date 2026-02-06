@@ -7,8 +7,8 @@ use crate::{file::midi::MIDIFile, scanner::Scanner};
 
 #[derive(Debug)]
 pub struct ChunkFile<'a> {
-    #[debug("{:?}", String::from_utf8_lossy(kind))]
-    pub kind: [u8; 4],
+    #[debug("{:?}", String::from_utf8_lossy(*kind))]
+    pub kind: &'a [u8; 4],
     pub length: u32,
     #[debug(skip)]
     pub data: &'a [u8],
@@ -34,7 +34,7 @@ impl<'a> TryFrom<&'a MIDIFile> for ChunksFile<'a> {
 
         while !scanner.done() {
             let kind = scanner
-                .eat_array::<4>()
+                .eat_bytes::<4>()
                 .ok_or(TryFromError::CouldNotReadKind)?;
             let length = scanner
                 .eat_u32_be()

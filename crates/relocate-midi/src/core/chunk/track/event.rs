@@ -19,6 +19,7 @@ pub struct TrackEvent {
 }
 
 #[derive(Debug, Display, Clone, PartialEq)]
+#[deprecated]
 pub enum TrackEventKind {
     #[display("Meta")]
     Meta { status: u8, data: Vec<u8> },

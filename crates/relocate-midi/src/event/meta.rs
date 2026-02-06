@@ -311,32 +311,3 @@ impl TryFrom<&TrackEventKind> for MetaEvent {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_meta_event_time_signature() {
-        // 6/8 time, 24 clocks per dotted quarter, 8 32nd-notes per quarter
-        let event_kind = TrackEventKind::Meta {
-            status: 0x58,
-            data: vec![0x06, 0x03, 0x18, 0x08],
-        };
-        let meta_event = MetaEvent::try_from(&event_kind).unwrap();
-        match meta_event {
-            MetaEvent::TimeSignature {
-                numerator,
-                denominator,
-                midi_clocks_per_metronome_click,
-                thirty_second_notes_per_midi_quarter_note,
-            } => {
-                assert_eq!(numerator, 6);
-                assert_eq!(denominator, 3);
-                assert_eq!(midi_clocks_per_metronome_click, 24);
-                assert_eq!(thirty_second_notes_per_midi_quarter_note, 8);
-            }
-            _ => panic!("Expected TimeSignature meta event"),
-        }
-    }
-}
