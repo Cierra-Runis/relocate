@@ -1,4 +1,4 @@
-use derive_more::{Debug, Display, PartialEq};
+use derive_more::Debug;
 
 #[derive(Debug)]
 pub struct TrackEvent {
@@ -15,22 +15,6 @@ pub struct TrackEvent {
     /// Delta-time is in ticks as specified in the header chunk.
     pub delta_time: u32,
 
-    pub kind: TrackEventKind,
-}
-
-#[derive(Debug, Display, Clone, PartialEq)]
-#[deprecated]
-pub enum TrackEventKind {
-    #[display("Meta")]
-    Meta { status: u8, data: Vec<u8> },
-    #[display("SysEx")]
-    SysEx { kind: SysExEventKind, data: Vec<u8> },
-    #[display("MIDI")]
-    MIDI { status: u8, data: Vec<u8> },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SysExEventKind {
-    F0,
-    F7,
+    /// TODO: Complete this struct
+    pub kind: (),
 }

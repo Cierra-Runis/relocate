@@ -29,14 +29,14 @@ pub enum TryFromError {
     InvalidTracksCount,
 }
 
-impl TryFrom<&HeaderChunkFile> for HeaderChunk {
+impl TryFrom<&HeaderChunkFile<'_>> for HeaderChunk {
     type Error = TryFromError;
 
     fn try_from(value: &HeaderChunkFile) -> Result<Self, Self::Error> {
         let format = Format::try_from(value.format).map_err(|_| TryFromError::InvalidFormat)?;
-        let tracks_count = u16::from_be_bytes(value.tracks_count);
+        let tracks_count = u16::from_be_bytes(*value.tracks_count);
         let division =
-            Division::try_from(value.division).map_err(|_| TryFromError::InvalidDivision)?;
+            Division::try_from(*value.division).map_err(|_| TryFromError::InvalidDivision)?;
 
         match format {
             Format::SingleMultiChannelTrack if tracks_count != 1 => {

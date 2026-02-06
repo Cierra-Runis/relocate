@@ -6,15 +6,15 @@ pub const HEADER_CHUNK_KIND: &[u8; 4] = b"MThd";
 pub const HEADER_CHUNK_LENGTH: &u32 = &6;
 
 #[derive(Debug)]
-pub struct HeaderChunkFile {
+pub struct HeaderChunkFile<'a> {
     kind: &'static [u8; 4],
     length: &'static u32,
-    pub format: [u8; 2],
-    pub tracks_count: [u8; 2],
-    pub division: [u8; 2],
+    pub format: &'a [u8; 2],
+    pub tracks_count: &'a [u8; 2],
+    pub division: &'a [u8; 2],
 }
 
-impl HeaderChunkFile {
+impl<'a> HeaderChunkFile<'a> {
     #[inline]
     pub fn kind(&self) -> &[u8; 4] {
         self.kind
@@ -36,7 +36,7 @@ pub enum TryFromError {
     ScannerNotDone,
 }
 
-impl<'a> TryFrom<&ChunkFile<'a>> for HeaderChunkFile {
+impl<'a> TryFrom<&ChunkFile<'a>> for HeaderChunkFile<'a> {
     type Error = TryFromError;
 
     fn try_from(value: &ChunkFile<'a>) -> Result<Self, Self::Error> {
@@ -49,13 +49,13 @@ impl<'a> TryFrom<&ChunkFile<'a>> for HeaderChunkFile {
 
         let mut scanner = crate::scanner::Scanner::new(value.data);
         let format = scanner
-            .eat_array::<2>()
+            .eat_bytes::<2>()
             .ok_or(TryFromError::CouldNotReadFormat)?;
         let tracks_count = scanner
-            .eat_array::<2>()
+            .eat_bytes::<2>()
             .ok_or(TryFromError::CouldNotReadTrackCount)?;
         let division = scanner
-            .eat_array::<2>()
+            .eat_bytes::<2>()
             .ok_or(TryFromError::CouldNotReadDivision)?;
 
         if !scanner.done() {

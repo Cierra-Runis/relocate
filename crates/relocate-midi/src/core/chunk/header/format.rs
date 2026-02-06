@@ -26,10 +26,10 @@ pub enum TryFromError {
     UnknownFormatBytes,
 }
 
-impl TryFrom<[u8; 2]> for Format {
+impl TryFrom<&[u8; 2]> for Format {
     type Error = TryFromError;
 
-    fn try_from(bytes: [u8; 2]) -> Result<Self, Self::Error> {
+    fn try_from(bytes: &[u8; 2]) -> Result<Self, Self::Error> {
         match bytes {
             [0x00, 0x00] => Ok(Format::SingleMultiChannelTrack),
             [0x00, 0x01] => Ok(Format::SimultaneousTracks),

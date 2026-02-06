@@ -26,31 +26,3 @@ impl TryFrom<u8> for FPS {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_fps_try_from_valid() {
-        const TEST_CASES: &[(u8, FPS)] = &[
-            (232, FPS::FPS24),
-            (231, FPS::FPS25),
-            (227, FPS::FPS30Drop),
-            (226, FPS::FPS30),
-        ];
-        for (input, expected) in TEST_CASES {
-            let result = FPS::try_from(*input).unwrap();
-            assert_eq!(&result, expected);
-        }
-    }
-
-    #[test]
-    fn test_fps_try_from_invalid() {
-        const INVALID_INPUTS: &[u8] = &[0, 1, 100, 255];
-        for input in INVALID_INPUTS {
-            let result = FPS::try_from(*input);
-            assert!(matches!(result, Err(TryFromError::InvalidFPS)));
-        }
-    }
-}

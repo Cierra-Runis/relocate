@@ -2,10 +2,7 @@ pub mod event;
 
 use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
-use crate::{
-    core::chunk::track::event::TrackEvent,
-    event::file::track::{TrackEventFile, TrackEventsFile},
-};
+use crate::{core::chunk::track::event::TrackEvent, event::file::track::TrackEventsFile};
 
 /// The track chunks (type MTrk) are where actual song data is stored.  Each
 /// track chunk is simply a stream of MIDI events (and non-MIDI events),
@@ -28,11 +25,12 @@ impl<'a> TryFrom<&'a TrackEventsFile<'a>> for TrackChunk {
     type Error = TryFromError;
 
     fn try_from(value: &TrackEventsFile) -> Result<Self, Self::Error> {
-        let mut events = Vec::new();
+        let mut track_events = Vec::new();
         for track_event_file in value.iter() {
             let delta_time = track_event_file.delta_time;
-            todo!();
+            let kind = (); // TODO: Complete conversion from TrackEventFile to TrackEvent
+            track_events.push(TrackEvent { delta_time, kind });
         }
-        Ok(TrackChunk(events))
+        Ok(TrackChunk(track_events))
     }
 }

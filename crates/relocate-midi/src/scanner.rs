@@ -67,13 +67,6 @@ impl<'a> Scanner<'a> {
     pub fn eat_bytes<const N: usize>(&mut self) -> Option<&'a [u8; N]> {
         self.eat_slice(N)?.try_into().ok()
     }
-
-    /// Consume and return exactly N bytes as an owned array.
-    #[inline]
-    #[deprecated]
-    pub fn eat_array<const N: usize>(&mut self) -> Option<[u8; N]> {
-        self.eat_bytes::<N>().copied()
-    }
 }
 
 impl<'a> Scanner<'a> {
