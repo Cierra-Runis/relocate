@@ -89,7 +89,6 @@ impl<'a> Scanner<'a> {
     ///
     /// If the variable-length quantity is malformed (e.g., incomplete or
     /// exceeds the maximum size), returns `None`.
-    #[inline]
     pub fn eat_variable_length_quantity(&mut self) -> Option<u32> {
         let mut value: u32 = 0;
         for _ in 0..4 {
@@ -102,12 +101,16 @@ impl<'a> Scanner<'a> {
         None
     }
 
+    /// Consume bytes until a byte with the high bit set is found, returning
+    /// the consumed bytes as a slice.
+    ///
+    /// If no such byte is found before the end of the slice, returns `None`.
     pub fn eat_until_high_bit_is_one(&mut self) -> Option<&'a [u8]> {
         let start_cursor = self.cursor;
-        while let Some(byte) = self.peek() {
-            self.cursor += 1;
+        while let Some(byte) = self.eat() {
             if byte & 0x80 != 0 {
-                return Some(&self.bytes[start_cursor..self.cursor]);
+                let end_cursor = self.cursor;
+                return Some(&self.bytes[start_cursor..end_cursor]);
             }
         }
         None
