@@ -3,6 +3,9 @@ name = "relocate-midi"
 version.workspace = true
 edition.workspace = true
 
+[features]
+file = []
+
 [dependencies]
 anyhow.workspace = true
 derive_more.workspace = true
