@@ -104,18 +104,26 @@ impl<'a> Scanner<'a> {
     }
 
     /// Consume bytes until a byte with the high bit set is found, returning
-    /// the consumed bytes as a slice.
+    /// the consumed bytes as a slice (not including the high-bit byte).
     ///
-    /// If no such byte is found before the end of the slice, returns `None`.
+    /// This is used to read MIDI data bytes (which have high bit = 0) until
+    /// we encounter a status byte (high bit = 1), which we do NOT consume.
+    ///
+    /// Returns the slice of consumed data bytes, or None if we reach the end
+    /// without finding a high-bit byte.
     pub fn eat_until_high_bit_is_one(&mut self) -> Option<&'a [u8]> {
         let start_cursor = self.cursor;
-        while let Some(byte) = self.eat() {
+        while let Some(byte) = self.peek() {
             if byte & 0x80 != 0 {
+                // Found a byte with high bit set, stop without consuming it
                 let end_cursor = self.cursor;
                 return Some(&self.bytes[start_cursor..end_cursor]);
             }
+            // Consume the byte with high bit = 0
+            self.eat();
         }
-        None
+        // Reached the end of the slice, return the consumed bytes
+        Some(&self.bytes[start_cursor..self.cursor])
     }
 }
 
