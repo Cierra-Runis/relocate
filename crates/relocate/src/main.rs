@@ -1,15 +1,12 @@
-use relocate_midi::{
-    core::chunk::Chunk,
-    file::{chunk::ChunksFile, midi::MIDIFile},
-};
+use relocate_midi::core::{chunk::Chunk, midi::MIDI};
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bytes = fs::read("./assets/World Vanquisher.mid").expect("Failed to read MIDI file");
-    let midi_file = MIDIFile::from(bytes);
+    let midi = MIDI::try_from(bytes)?;
 
-    for chunk_file in ChunksFile::try_from(&midi_file)? {
-        match Chunk::try_from(&chunk_file)? {
+    for chunk in midi {
+        match chunk {
             Chunk::Header(chunk) => println!("Header Chunk: {:?}", chunk),
             Chunk::Track(chunk) => {
                 for event in chunk {

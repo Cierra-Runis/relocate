@@ -5,7 +5,7 @@ use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
 use crate::{file::midi::MIDIFile, scanner::Scanner};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct ChunkFile<'a> {
     #[debug("{:?}", String::from_utf8_lossy(*kind))]
     pub kind: &'a [u8; 4],

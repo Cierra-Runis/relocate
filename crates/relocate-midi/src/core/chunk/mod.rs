@@ -27,7 +27,7 @@ use crate::{
 /// [track chunk]: ChunkKind::Track
 /// [chunk]: crate::chunk::Chunk
 #[derive(Debug)]
-pub enum Chunk<'a> {
+pub enum Chunk {
     /// A [header chunk](ChunkKind::Header) provides a minimal amount
     /// of information pertaining to the entire [MIDI File].
     ///
@@ -40,7 +40,24 @@ pub enum Chunk<'a> {
 
     /// Your programs should _expect_ [alien chunk](ChunkKind::Alien)s
     /// and treat them as if they weren't there.
-    Alien(&'a ChunkFile<'a>),
+    Alien(AlienChunk),
+}
+
+#[derive(Debug)]
+pub struct AlienChunk {
+    pub kind: [u8; 4],
+    pub length: u32,
+    pub data: Vec<u8>,
+}
+
+impl<'a> From<ChunkFile<'a>> for AlienChunk {
+    fn from(value: ChunkFile) -> Self {
+        AlienChunk {
+            kind: *value.kind,
+            length: value.length,
+            data: value.data.to_vec(),
+        }
+    }
 }
 
 /// TODO: Inner error variants should contain the original error.
@@ -53,7 +70,7 @@ pub enum TryFromError {
     TrackChunkConversionError,
 }
 
-impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk<'a> {
+impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk {
     type Error = TryFromError;
 
     fn try_from(value: &'a ChunkFile<'a>) -> Result<Self, Self::Error> {
@@ -74,7 +91,7 @@ impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk<'a> {
                     .map_err(|_| TryFromError::TrackChunkConversionError)?;
                 Ok(Chunk::Track(track_chunk))
             }
-            _ => Ok(Chunk::Alien(value)),
+            _ => Ok(Chunk::Alien(AlienChunk::from(value.clone()))),
         }
     }
 }
