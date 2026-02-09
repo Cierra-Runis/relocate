@@ -1,4 +1,4 @@
-use crate::core::chunk::header::division::fps::{FPS, TryFromError};
+use crate::core::chunk::header::division::fps::{Fps, TryFromError};
 
 pub mod fps;
 
@@ -9,7 +9,7 @@ pub enum Division {
 
     /// For time-code-based time.
     TimeCode {
-        frames_per_second: FPS,
+        frames_per_second: Fps,
         ticks_per_frame: u8,
     },
 }
@@ -30,7 +30,7 @@ impl TryFrom<[u8; 2]> for Division {
             return Ok(Division::TicksPerQuarterNote(u16::from_be_bytes(value)));
         }
 
-        let fps = FPS::try_from(high).map_err(|_| TryFromError::InvalidFPS)?;
+        let fps = Fps::try_from(high).map_err(|_| TryFromError::InvalidFPS)?;
 
         Ok(Division::TimeCode {
             frames_per_second: fps,

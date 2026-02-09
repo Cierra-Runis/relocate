@@ -1,7 +1,7 @@
 use derive_more::{Debug, Display, Eq, Error, PartialEq};
 
 #[derive(Debug, Display, PartialEq, Eq)]
-pub enum FPS {
+pub enum Fps {
     FPS24 = -24,
     FPS25 = -25,
     FPS30Drop = -29,
@@ -13,15 +13,15 @@ pub enum TryFromError {
     InvalidFPS,
 }
 
-impl TryFrom<u8> for FPS {
+impl TryFrom<u8> for Fps {
     type Error = TryFromError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value as i8 {
-            -24 => Ok(FPS::FPS24),
-            -25 => Ok(FPS::FPS25),
-            -29 => Ok(FPS::FPS30Drop),
-            -30 => Ok(FPS::FPS30),
+            -24 => Ok(Fps::FPS24),
+            -25 => Ok(Fps::FPS25),
+            -29 => Ok(Fps::FPS30Drop),
+            -30 => Ok(Fps::FPS30),
             _ => Err(TryFromError::InvalidFPS),
         }
     }
