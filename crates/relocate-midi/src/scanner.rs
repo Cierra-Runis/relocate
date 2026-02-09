@@ -111,7 +111,7 @@ impl<'a> Scanner<'a> {
     ///
     /// Returns the slice of consumed data bytes, or None if we reach the end
     /// without finding a high-bit byte.
-    pub fn eat_until_high_bit_is_one(&mut self) -> Option<&'a [u8]> {
+    pub fn eat_data_bytes(&mut self) -> Option<&'a [u8]> {
         let start_cursor = self.cursor;
         while let Some(byte) = self.peek() {
             if byte & 0x80 != 0 {

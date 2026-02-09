@@ -2,11 +2,25 @@ use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
 use crate::{file::chunk::track::TrackChunkFile, scanner::Scanner};
 
-pub const TRACK_EVENT_STATUS_META: u8 = 0xFF;
-pub const TRACK_EVENT_STATUS_SYS_EX_F0: u8 = 0xF0;
-pub const TRACK_EVENT_STATUS_SYS_EX_F7: u8 = 0xF7;
-pub const TRACK_EVENT_STATUS_MIDI_MIN: u8 = 0x80;
-pub const TRACK_EVENT_STATUS_MIDI_MAX: u8 = 0xEF;
+pub const TRACK_EVENT_DATA_00_MIN_MIDI_RUNNING: u8 = 0x00;
+pub const TRACK_EVENT_DATA_7F_MAX_MIDI_RUNNING: u8 = 0x7F;
+
+pub const TRACK_EVENT_STATUS_80_MIN_MIDI: u8 = 0x80;
+pub const TRACK_EVENT_STATUS_EF_MAX_MIDI: u8 = 0xEF;
+
+/// Start of System Exclusive
+pub const TRACK_EVENT_STATUS_F0_SOX: u8 = 0xF0;
+
+pub const TRACK_EVENT_STATUS_F1_MIN_SYS_COMMON: u8 = 0xF1;
+pub const TRACK_EVENT_STATUS_F6_MAX_SYS_COMMON: u8 = 0xF6;
+
+/// End of System Exclusive
+pub const TRACK_EVENT_STATUS_F7_EOX: u8 = 0xF7;
+
+pub const TRACK_EVENT_STATUS_F8_MIN_SYS_REALTIME: u8 = 0xF8;
+pub const TRACK_EVENT_STATUS_FE_MAX_SYS_REALTIME: u8 = 0xFE;
+
+pub const TRACK_EVENT_STATUS_FF_META: u8 = 0xFF;
 
 #[derive(Debug)]
 pub struct TrackEventFile<'a> {
@@ -70,7 +84,31 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
             let status_byte = *scanner.peek().ok_or(TryFromError::CouldNotReadStatus)?;
 
             let event = match status_byte {
-                TRACK_EVENT_STATUS_META => {
+                TRACK_EVENT_DATA_00_MIN_MIDI_RUNNING..=TRACK_EVENT_DATA_7F_MAX_MIDI_RUNNING => {
+                    let status = running_status.ok_or(TryFromError::RunningStatusNotSet)?;
+                    running_status = Some(status);
+                    let data = scanner
+                        .eat_data_bytes()
+                        .ok_or(TryFromError::CouldNotReadData)?;
+                    TrackEventFile {
+                        delta_time,
+                        event: EventFile::MIDI(MIDIEventFile { status, data }),
+                    }
+                }
+
+                TRACK_EVENT_STATUS_80_MIN_MIDI..=TRACK_EVENT_STATUS_EF_MAX_MIDI => {
+                    let status = scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
+                    running_status = Some(status);
+                    let data = scanner
+                        .eat_data_bytes()
+                        .ok_or(TryFromError::CouldNotReadData)?;
+                    TrackEventFile {
+                        delta_time,
+                        event: EventFile::MIDI(MIDIEventFile { status, data }),
+                    }
+                }
+
+                TRACK_EVENT_STATUS_FF_META => {
                     scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
                     running_status = None;
 
@@ -85,14 +123,15 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                     TrackEventFile {
                         delta_time,
                         event: EventFile::Meta(MetaEventFile {
-                            status: &TRACK_EVENT_STATUS_META,
+                            status: &TRACK_EVENT_STATUS_FF_META,
                             kind,
                             length,
                             data,
                         }),
                     }
                 }
-                TRACK_EVENT_STATUS_SYS_EX_F0 => {
+
+                TRACK_EVENT_STATUS_F0_SOX => {
                     scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
                     running_status = None;
 
@@ -106,13 +145,14 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                     TrackEventFile {
                         delta_time,
                         event: EventFile::SysEx(SysExEventFile {
-                            status: &TRACK_EVENT_STATUS_SYS_EX_F0,
+                            status: &TRACK_EVENT_STATUS_F0_SOX,
                             length,
                             data,
                         }),
                     }
                 }
-                TRACK_EVENT_STATUS_SYS_EX_F7 => {
+
+                TRACK_EVENT_STATUS_F7_EOX => {
                     scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
                     running_status = None;
 
@@ -126,35 +166,13 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                     TrackEventFile {
                         delta_time,
                         event: EventFile::SysEx(SysExEventFile {
-                            status: &TRACK_EVENT_STATUS_SYS_EX_F7,
+                            status: &TRACK_EVENT_STATUS_F7_EOX,
                             length,
                             data,
                         }),
                     }
                 }
-                TRACK_EVENT_STATUS_MIDI_MIN..=TRACK_EVENT_STATUS_MIDI_MAX => {
-                    let status = scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
-                    running_status = Some(status);
 
-                    let data = scanner
-                        .eat_until_high_bit_is_one()
-                        .ok_or(TryFromError::CouldNotReadData)?;
-                    TrackEventFile {
-                        delta_time,
-                        event: EventFile::MIDI(MIDIEventFile { status, data }),
-                    }
-                }
-                0x00..=0x7F => {
-                    let status = running_status.ok_or(TryFromError::RunningStatusNotSet)?;
-                    running_status = Some(status);
-                    let data = scanner
-                        .eat_until_high_bit_is_one()
-                        .ok_or(TryFromError::CouldNotReadData)?;
-                    TrackEventFile {
-                        delta_time,
-                        event: EventFile::MIDI(MIDIEventFile { status, data }),
-                    }
-                }
                 // According to the SMF specification, System Common
                 // (0xF1–0xF6) and System Real-Time (0xF8–0xFE) messages are
                 // not valid events within a MIDI file. If such status bytes
@@ -162,7 +180,17 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                 // parsers choose to ignore these bytes or treat them as
                 // malformed data to maintain compatibility with legacy or
                 // poorly generated files.
-                0xF1..0xFF => Err(TryFromError::InvalidStatusByte)?,
+                TRACK_EVENT_STATUS_F1_MIN_SYS_COMMON..=TRACK_EVENT_STATUS_F6_MAX_SYS_COMMON
+                | TRACK_EVENT_STATUS_F8_MIN_SYS_REALTIME..=TRACK_EVENT_STATUS_FE_MAX_SYS_REALTIME =>
+                {
+                    scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
+                    running_status = None;
+                    println!(
+                        "Warning: Encountered invalid status byte {:#X} in MIDI file. Skipping event.",
+                        status_byte
+                    );
+                    continue;
+                }
             };
             events.push(event);
         }
