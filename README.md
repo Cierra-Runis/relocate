@@ -4,18 +4,44 @@
 rustup override set nightly
 ```
 
-## Graph
+## Convert Diagram
 
-To generate a module dependency graph, run:
+```mermaid
+flowchart TD
+    Bytes["Vec&lt;u8&gt;"] --> MIDI["MIDI(Vec&lt;Chunk&gt;)"];
 
-```sh
-cargo install cargo-modules
-cargo modules dependencies --package relocate-midi --layout dot --no-externs --no-fns --no-uses > ./target/mods-owns.dot
-cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --no-fns --no-owns > ./target/mods-uses.dot
-cargo modules dependencies --package relocate-midi --layout sfdp --no-externs --no-fns > ./target/mods.dot
+    Bytes --> MIDIFile["MIDIFile(Vec&lt;u8&gt;)"] --> ChunksFile["ChunksFile(Vec&ltChunkFile&gt;)"];
+
+    ChunkFile["ChunkFile"] --> HeaderChunkFile & TrackChunkFile;
+    HeaderChunkFile --> HeaderChunk;
+    TrackChunkFile --> TrackEventsFile --> TrackChunk["TrackChunk(Vec&lt;TrackEvent&gt;)"];
+
+    TrackEventFile --> TrackEvent;
+
+    ChunksFile ..-> ChunkFile;
+    TrackEventsFile ..-> TrackEventFile;
+    TrackEvent ..-> TrackChunk;
+    TrackChunk & HeaderChunk ..-> Chunk;
+    Chunk ..-> MIDI;
+
+    subgraph "File Representation"
+        MIDIFile
+        ChunksFile
+        ChunkFile
+        HeaderChunkFile
+        TrackChunkFile
+        TrackEventsFile
+        TrackEventFile
+    end
+
+    subgraph "Core Representation"
+        MIDI
+        Chunk
+        HeaderChunk
+        TrackChunk
+        TrackEvent
+    end
 ```
-
-Then use [GraphvizOnline](https://dreampuf.github.io/GraphvizOnline) to visualize the file.
 
 ## Specification
 
