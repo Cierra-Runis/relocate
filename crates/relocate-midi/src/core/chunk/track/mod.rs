@@ -2,7 +2,7 @@ pub mod event;
 
 use derive_more::{Debug, Deref, Display, Error, IntoIterator};
 
-use crate::{core::chunk::track::event::TrackEvent, event::file::track::TrackEventsFile};
+use crate::{core::chunk::track::event::TrackEvent, file::event::track::TrackEventsFile};
 
 /// The track chunks (type MTrk) are where actual song data is stored.  Each
 /// track chunk is simply a stream of MIDI events (and non-MIDI events),

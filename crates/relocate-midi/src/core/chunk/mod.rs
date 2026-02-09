@@ -5,11 +5,13 @@ use derive_more::{Debug, Display, Error};
 
 use crate::{
     core::chunk::{header::HeaderChunk, track::TrackChunk},
-    event::file::{self, track::TrackEventsFile},
-    file::chunk::{
-        ChunkFile,
-        header::{HEADER_CHUNK_KIND, HeaderChunkFile},
-        track::{TRACK_CHUNK_KIND, TrackChunkFile},
+    file::{
+        chunk::{
+            ChunkFile,
+            header::{HEADER_CHUNK_KIND, HeaderChunkFile},
+            track::{TRACK_CHUNK_KIND, TrackChunkFile},
+        },
+        event::track::TrackEventsFile,
     },
 };
 
@@ -47,7 +49,7 @@ pub enum TryFromError {
     HeaderChunkFileConversionError,
     HeaderChunkConversionError,
     TrackChunkFileConversionError,
-    TrackEventsFileConversionError(file::track::TryFromError),
+    TrackEventsFileConversionError(crate::file::event::track::TryFromError),
     TrackChunkConversionError,
 }
 
