@@ -24,7 +24,7 @@ pub enum EventFile<'a> {
 #[derive(Debug)]
 pub struct MetaEventFile<'a> {
     pub status: &'static u8,
-    pub kind: u8,
+    pub kind: &'a u8,
     pub length: u32,
     pub data: &'a [u8],
 }
@@ -38,7 +38,7 @@ pub struct SysExEventFile<'a> {
 
 #[derive(Debug)]
 pub struct MIDIEventFile<'a> {
-    pub status: u8,
+    pub status: &'a u8,
     pub data: &'a [u8],
 }
 
@@ -60,14 +60,14 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
     fn try_from(value: &'a TrackChunkFile<'a>) -> Result<Self, Self::Error> {
         let mut events = Vec::new();
         let mut scanner = Scanner::new(value.track_events);
-        let mut running_status: Option<u8> = None;
+        let mut running_status: Option<&'a u8> = None;
 
         while !scanner.done() {
             let delta_time = scanner
                 .eat_variable_length_quantity()
                 .ok_or(TryFromError::CouldNotReadVLQ)?;
 
-            let status_byte = scanner.peek().ok_or(TryFromError::CouldNotReadStatus)?;
+            let status_byte = *scanner.peek().ok_or(TryFromError::CouldNotReadStatus)?;
 
             let event = match status_byte {
                 TRACK_EVENT_STATUS_META => {

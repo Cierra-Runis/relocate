@@ -36,8 +36,8 @@ impl<'a> Scanner<'a> {
     ///
     /// If there are no bytes left, returns `None`.
     #[inline]
-    pub fn peek(&self) -> Option<u8> {
-        self.after().first().cloned()
+    pub fn peek(&self) -> Option<&'a u8> {
+        self.after().first()
     }
 
     /// Consume and return the byte right behind the cursor.
@@ -45,7 +45,7 @@ impl<'a> Scanner<'a> {
     /// If there are no bytes left, returns `None` and does not advance the
     /// cursor.
     #[inline]
-    pub fn eat(&mut self) -> Option<u8> {
+    pub fn eat(&mut self) -> Option<&'a u8> {
         let peeked = self.peek()?;
         self.cursor += 1;
         Some(peeked)
