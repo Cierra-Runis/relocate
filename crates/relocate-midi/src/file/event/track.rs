@@ -32,7 +32,7 @@ pub struct TrackEventFile<'a> {
 pub enum EventFile<'a> {
     Meta(MetaEventFile<'a>),
     SysEx(SysExEventFile<'a>),
-    MIDI(MIDIEventFile<'a>),
+    Midi(MIDIEventFile<'a>),
 }
 
 #[derive(Debug)]
@@ -92,7 +92,7 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                         .ok_or(TryFromError::CouldNotReadData)?;
                     TrackEventFile {
                         delta_time,
-                        event: EventFile::MIDI(MIDIEventFile { status, data }),
+                        event: EventFile::Midi(MIDIEventFile { status, data }),
                     }
                 }
 
@@ -104,7 +104,7 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                         .ok_or(TryFromError::CouldNotReadData)?;
                     TrackEventFile {
                         delta_time,
-                        event: EventFile::MIDI(MIDIEventFile { status, data }),
+                        event: EventFile::Midi(MIDIEventFile { status, data }),
                     }
                 }
 
