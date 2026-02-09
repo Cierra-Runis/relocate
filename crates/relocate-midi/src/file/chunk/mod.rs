@@ -22,7 +22,6 @@ pub enum TryFromError {
     CouldNotReadKind,
     CouldNotReadLength,
     CouldNotReadData,
-    ScannerNotDone,
 }
 
 impl<'a> TryFrom<&'a MIDIFile> for ChunksFile<'a> {
