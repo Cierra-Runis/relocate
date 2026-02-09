@@ -91,7 +91,7 @@ impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk {
                     .map_err(|_| TryFromError::TrackChunkConversionError)?;
                 Ok(Chunk::Track(track_chunk))
             }
-            _ => Ok(Chunk::Alien(AlienChunk::from(value.clone()))),
+            _ => Ok(Chunk::Alien(AlienChunk::from(*value))),
         }
     }
 }
