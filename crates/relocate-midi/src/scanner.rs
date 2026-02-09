@@ -188,7 +188,6 @@ mod tests {
             (&[0x80], None, 1),
             (&[0x80, 0xFF, 0xFF, 0xFF, 0xFF], None, 4), // with extra bytes
             // TIPS: Undefined Behavior but valid VLQ
-            // TODO: Maybe we should not accept this or treat beginning `0x80` as `0x81`?
             (&[0x80, 0x0F, 0xFF, 0xFF, 0xFF], Some(0x0F), 2),
             // Incomplete VLQ
             (&[0xFF], None, 1),
