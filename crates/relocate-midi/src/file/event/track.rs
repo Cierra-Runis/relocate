@@ -61,7 +61,6 @@ pub struct TrackEventsFile<'a>(Vec<TrackEventFile<'a>>);
 
 #[derive(Debug, Display, Error)]
 pub enum TryFromError {
-    InvalidStatusByte,
     CouldNotReadStatus,
     CouldNotReadVLQ,
     CouldNotReadData,
