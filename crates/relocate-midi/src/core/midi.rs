@@ -10,8 +10,8 @@ pub struct MIDI(Vec<Chunk>);
 
 #[derive(Debug, Display, Error)]
 pub enum TryFromError {
-    CouldNotConvertChunk,
-    CouldNotReadChunksFile,
+    MIDIFileToChunksFile(crate::file::chunk::TryFromError),
+    ChunkFileToChunk(crate::core::chunk::TryFromError),
 }
 
 impl TryFrom<Vec<u8>> for MIDI {
@@ -29,10 +29,9 @@ impl<'a> TryFrom<&'a MIDIFile> for MIDI {
         let mut chunks = Vec::new();
 
         let chunks_file =
-            ChunksFile::try_from(value).map_err(|_| TryFromError::CouldNotReadChunksFile)?;
+            ChunksFile::try_from(value).map_err(TryFromError::MIDIFileToChunksFile)?;
         for chunk_file in chunks_file {
-            let chunk =
-                Chunk::try_from(&chunk_file).map_err(|_| TryFromError::CouldNotConvertChunk)?;
+            let chunk = Chunk::try_from(&chunk_file).map_err(TryFromError::ChunkFileToChunk)?;
             chunks.push(chunk);
         }
 

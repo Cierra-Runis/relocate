@@ -60,14 +60,13 @@ impl<'a> From<ChunkFile<'a>> for AlienChunk {
     }
 }
 
-/// TODO: Inner error variants should contain the original error.
 #[derive(Debug, Display, Error)]
 pub enum TryFromError {
-    HeaderChunkFileConversionError,
-    HeaderChunkConversionError,
-    TrackChunkFileConversionError,
-    TrackEventsFileConversionError(crate::file::event::track::TryFromError),
-    TrackChunkConversionError,
+    ChunkFileToHeaderChunkFile(crate::file::chunk::header::TryFromError),
+    HeaderChunkFileToHeaderChunk(crate::core::chunk::header::TryFromError),
+    ChunkFileToTrackChunkFile(crate::file::chunk::track::TryFromError),
+    TrackChunkFileToTrackEventsFile(crate::file::event::track::TryFromError),
+    TrackEventsFileToTrackChunk(crate::core::chunk::track::TryFromError),
 }
 
 impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk {
@@ -77,18 +76,18 @@ impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk {
         match value.kind {
             HEADER_CHUNK_KIND => {
                 let chunk_file = HeaderChunkFile::try_from(value)
-                    .map_err(|_| TryFromError::HeaderChunkFileConversionError)?;
+                    .map_err(TryFromError::ChunkFileToHeaderChunkFile)?;
                 let header_chunk = HeaderChunk::try_from(&chunk_file)
-                    .map_err(|_| TryFromError::HeaderChunkConversionError)?;
+                    .map_err(TryFromError::HeaderChunkFileToHeaderChunk)?;
                 Ok(Chunk::Header(header_chunk))
             }
             TRACK_CHUNK_KIND => {
                 let chunk_file = TrackChunkFile::try_from(value)
-                    .map_err(|_| TryFromError::TrackChunkFileConversionError)?;
+                    .map_err(TryFromError::ChunkFileToTrackChunkFile)?;
                 let events_file = TrackEventsFile::try_from(&chunk_file)
-                    .map_err(TryFromError::TrackEventsFileConversionError)?;
+                    .map_err(TryFromError::TrackChunkFileToTrackEventsFile)?;
                 let track_chunk = TrackChunk::try_from(&events_file)
-                    .map_err(|_| TryFromError::TrackChunkConversionError)?;
+                    .map_err(TryFromError::TrackEventsFileToTrackChunk)?;
                 Ok(Chunk::Track(track_chunk))
             }
             _ => Ok(Chunk::Alien(AlienChunk::from(*value))),
