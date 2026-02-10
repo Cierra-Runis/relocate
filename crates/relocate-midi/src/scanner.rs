@@ -1,3 +1,8 @@
+//! A module providing a byte scanner for efficiently reading bytes from a
+//! slice.
+//!
+//! Based on [typst/unscanny](https://github.com/typst/unscanny/blob/main/src/lib.rs).
+
 /// A byte scanner for efficiently reading bytes from a slice.
 #[derive(Debug)]
 pub struct Scanner<'a> {
