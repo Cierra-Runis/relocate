@@ -1,4 +1,5 @@
 use derive_more::{Debug, Deref, Display, Error, IntoIterator};
+use log::warn;
 
 use crate::{file::chunk::track::TrackChunkFile, scanner::Scanner};
 
@@ -184,8 +185,8 @@ impl<'a> TryFrom<&'a TrackChunkFile<'a>> for TrackEventsFile<'a> {
                 {
                     scanner.eat().ok_or(TryFromError::CouldNotReadStatus)?;
                     running_status = None;
-                    println!(
-                        "Warning: Encountered invalid status byte {:#X} in MIDI file. Skipping event.",
+                    warn!(
+                        "Encountered invalid status byte {:#X} in MIDI file. Skipping event.",
                         status_byte
                     );
                     continue;
