@@ -5,6 +5,7 @@ use crate::{
     file::{chunk::ChunksFile, midi::MIDIFile},
 };
 
+/// Above of [`MIDIFile`], a [`MIDI`] is a [series of chunks](Vec<Chunk>).
 #[derive(Debug, Deref, IntoIterator)]
 pub struct MIDI(Vec<Chunk>);
 

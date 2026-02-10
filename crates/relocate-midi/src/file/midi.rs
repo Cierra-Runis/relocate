@@ -1,7 +1,7 @@
 use derive_more::{Debug, Deref, Display};
 
-/// To any file system, a [MIDI File](MIDIFile)
-/// is simply a [series of 8-bit bytes](Vec<u8>).
+/// To any file system, a [`MIDIFile`] is simply
+/// a [series of 8-bit bytes](Vec<u8>).
 #[derive(Debug, Display, Deref)]
 #[debug("{}", pretty_hex::pretty_hex(_0))]
 #[display("{}", pretty_hex::simple_hex(_0))]
