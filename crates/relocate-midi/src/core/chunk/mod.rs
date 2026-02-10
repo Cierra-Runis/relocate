@@ -15,34 +15,28 @@ use crate::{
     },
 };
 
-/// [MIDI File]s contain two [types of chunk]s:
-/// [header chunk]s and [track chunk]s.
+/// [`MIDI`](crate::core::midi::MIDI) contains three types of [`Chunk`]:
 ///
-/// The concepts of multiple tracks, multiple MIDI outputs, patterns, sequences,
-/// and songs may all be implemented using several track [chunk]s.
-///
-/// [MIDI File]: crate::midi::MIDIFile
-/// [types of chunk]: ChunkKind
-/// [header chunk]: ChunkKind::Header
-/// [track chunk]: ChunkKind::Track
-/// [chunk]: crate::chunk::Chunk
+/// - [`Chunk::Header`] with [`HeaderChunk`] containing MIDI metadata
+/// - [`Chunk::Track`] with [`TrackChunk`] containing MIDI event data
+/// - [`Chunk::Alien`] with [`AlienChunk`] for unrecognized chunk types
 #[derive(Debug)]
 pub enum Chunk {
-    /// A [header chunk](ChunkKind::Header) provides a minimal amount
-    /// of information pertaining to the entire [MIDI File].
-    ///
-    /// [MIDI File]: crate::midi::MIDIFile
+    /// Provides a minimal amount of information pertaining to the entire
+    /// [MIDI](crate::core::midi::MIDI).
     Header(HeaderChunk),
 
-    /// A [track chunk](ChunkKind::Track) contains a sequential stream
-    /// of MIDI data which may contain information for up to 16 MIDI channels.
+    /// Contains a sequential stream of MIDI data which may contain information
+    /// for up to 16 MIDI channels.
     Track(TrackChunk),
 
-    /// Your programs should _expect_ [alien chunk](ChunkKind::Alien)s
-    /// and treat them as if they weren't there.
+    /// Your programs should _expect_ [`Chunk::Alien`] and treat them as if they
+    /// weren't there.
     Alien(AlienChunk),
 }
 
+/// An unrecognized chunk type, which your program should ignore.
+/// It is simply the owned version of [`ChunkFile`].
 #[derive(Debug)]
 pub struct AlienChunk {
     pub kind: [u8; 4],
