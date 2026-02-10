@@ -10,4 +10,5 @@ file = []
 anyhow.workspace = true
 derive_more.workspace = true
 hex.workspace = true
+log.workspace = true
 pretty-hex.workspace = true

@@ -7,7 +7,8 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 derive_more = { version = "2.1.1", features = ["full"] }
 hex = "0.4.3"
+log = "0.4.29"
 pretty-hex = "0.4.1"
