@@ -100,7 +100,7 @@ pub enum MetaEvent {
     /// any MTrk chunk, should you wish to output data through a different port
     /// later in the track.
     ///
-    /// See: http://www.somascape.org/midi/tech/mfile.html
+    /// See: <http://www.somascape.org/midi/tech/mfile.html>
     MIDIPort(u8),
 
     /// This event is _not_ optional. It is included so that an exact ending
