@@ -38,11 +38,8 @@ impl TryFrom<&HeaderChunkFile<'_>> for HeaderChunk {
         let division =
             Division::try_from(*value.division).map_err(|_| TryFromError::InvalidDivision)?;
 
-        match format {
-            Format::SingleMultiChannelTrack if tracks_count != 1 => {
-                return Err(TryFromError::InvalidTracksCount);
-            }
-            _ => {}
+        if format == Format::SingleMultiChannelTrack && tracks_count != 1 {
+            return Err(TryFromError::InvalidTracksCount);
         }
 
         Ok(HeaderChunk {
