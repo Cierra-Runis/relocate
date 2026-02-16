@@ -1,8 +1,27 @@
-pub mod event;
+use derive_more::{Debug, Deref, IntoIterator};
 
-use derive_more::{Debug, Deref, Display, Error, IntoIterator};
+use crate::{
+    core::event::{Event, TryFromError},
+    file::event::track::TrackEventsFile,
+};
 
-use crate::{core::chunk::track::event::TrackEvent, file::event::track::TrackEventsFile};
+#[derive(Debug)]
+pub struct TrackEvent {
+    /// Represents the amount of time before the following event, stored as a
+    /// variable-length quantity.
+    ///
+    /// If the first event in a track occurs at the very beginning of a track,
+    /// or if two events occur simultaneously, a delta-time of zero is used.
+    ///
+    /// Delta-times are _always_ present. (_Not_ storing delta-times of 0
+    /// requires at least two bytes for any other value, and most delta
+    /// times _aren't_ zero.)
+    ///
+    /// Delta-time is in ticks as specified in the header chunk.
+    pub delta_time: u32,
+
+    pub kind: Event,
+}
 
 /// The track chunks (type MTrk) are where actual song data is stored.  Each
 /// track chunk is simply a stream of MIDI events (and non-MIDI events),
@@ -13,14 +32,6 @@ use crate::{core::chunk::track::event::TrackEvent, file::event::track::TrackEven
 #[derive(Debug, Deref, IntoIterator)]
 pub struct TrackChunk(Vec<TrackEvent>);
 
-#[derive(Debug, Display, Error)]
-pub enum TryFromError {
-    InvalidVLQ,
-    InvalidStatusByte,
-    InvalidData,
-    InvalidRunningStatus,
-}
-
 impl<'a> TryFrom<&'a TrackEventsFile<'a>> for TrackChunk {
     type Error = TryFromError;
 
@@ -28,7 +39,7 @@ impl<'a> TryFrom<&'a TrackEventsFile<'a>> for TrackChunk {
         let mut track_events = Vec::new();
         for track_event_file in value.iter() {
             let delta_time = track_event_file.delta_time;
-            let kind = (); // TODO: Complete conversion from TrackEventFile to TrackEvent
+            let kind = Event::try_from(&track_event_file.event)?;
             track_events.push(TrackEvent { delta_time, kind });
         }
         Ok(TrackChunk(track_events))

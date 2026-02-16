@@ -1,4 +1,6 @@
-use derive_more::Debug;
+use derive_more::{Debug, Display, Error};
+
+use crate::{file::event::track::MetaEventFile, scanner::Scanner};
 
 /// In the syntax descriptions for each of the meta-events a set of conventions
 /// is used to describe parameters of the events. The FF which begins each
@@ -177,134 +179,123 @@ pub enum MetaEvent {
     },
 }
 
-#[derive(Debug)]
-pub enum TryFromEventKindError {
+#[derive(Debug, Display, Error)]
+pub enum TryFromError {
     InvalidEventKind,
     InvalidNumber,
     InvalidData,
     InvalidScannerState,
     #[debug("{:X}", _0)]
-    InvalidStatus(u8),
+    InvalidStatus(#[error(ignore)] u8),
 }
 
-// impl TryFrom<&TrackEventKind> for MetaEvent {
-//     type Error = TryFromEventKindError;
+impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
+    type Error = TryFromError;
 
-//     fn try_from(value: &TrackEventKind) -> Result<Self, Self::Error> {
-//         match value {
-//             TrackEventKind::Meta { status, data } => {
-//                 macro_rules! text_event {
-//                     ($variant:ident) => {
-//                         Ok(MetaEvent::$variant(
-//                             String::from_utf8_lossy(data).to_string(),
-//                         ))
-//                     };
-//                 }
+    fn try_from(value: &MetaEventFile) -> Result<Self, Self::Error> {
+        let status = value.status;
+        let data = value.data;
+        macro_rules! text_event {
+            ($variant:ident) => {
+                Ok(MetaEvent::$variant(
+                    String::from_utf8_lossy(data).to_string(),
+                ))
+            };
+        }
 
-//                 match status {
-//                     0x00 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let number = scanner
-//                             .eat_u16_be()
-//                             .ok_or(TryFromEventKindError::InvalidNumber)?;
-//                         if !scanner.done() {
-//                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::SequenceNumber(number))
-//                     }
+        match status {
+            0x00 => {
+                let mut scanner = Scanner::new(data);
+                let number = scanner.eat_u16_be().ok_or(TryFromError::InvalidNumber)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::SequenceNumber(number))
+            }
 
-//                     0x01 | 0x08..0x10 => text_event!(TextEvent),
-//                     0x02 => text_event!(CopyrightNotice),
-//                     0x03 => text_event!(SequenceOrTrackName),
-//                     0x04 => text_event!(InstrumentName),
-//                     0x05 => text_event!(Lyric),
-//                     0x06 => text_event!(Marker),
-//                     0x07 => text_event!(CuePoint),
+            0x01 | 0x08..0x10 => text_event!(TextEvent),
+            0x02 => text_event!(CopyrightNotice),
+            0x03 => text_event!(SequenceOrTrackName),
+            0x04 => text_event!(InstrumentName),
+            0x05 => text_event!(Lyric),
+            0x06 => text_event!(Marker),
+            0x07 => text_event!(CuePoint),
 
-//                     0x20 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let channel =
-// scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
-// if !scanner.done() {                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::MIDIChannelPrefix(channel))
-//                     }
+            0x20 => {
+                let mut scanner = Scanner::new(data);
+                let channel = *scanner.eat().ok_or(TryFromError::InvalidData)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::MIDIChannelPrefix(channel))
+            }
 
-//                     0x21 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let port =
-// scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
-// if !scanner.done() {                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::MIDIPort(port))
-//                     }
+            0x21 => {
+                let mut scanner = Scanner::new(data);
+                let port = *scanner.eat().ok_or(TryFromError::InvalidData)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::MIDIPort(port))
+            }
 
-//                     0x2F => Ok(MetaEvent::EndOfTrack),
+            0x2F => Ok(MetaEvent::EndOfTrack),
 
-//                     0x51 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let [t1, t2, t3] = scanner
-//                             .eat_array::<0x03>()
-//                             .ok_or(TryFromEventKindError::InvalidData)?;
-//                         let tempo = u32::from_be_bytes([0x00, t1, t2, t3]);
-//                         if !scanner.done() {
-//                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::SetTempo(tempo))
-//                     }
+            0x51 => {
+                let mut scanner = Scanner::new(data);
+                let [t1, t2, t3] = *scanner.eat_bytes::<3>().ok_or(TryFromError::InvalidData)?;
+                let tempo = u32::from_be_bytes([0x00, t1, t2, t3]);
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::SetTempo(tempo))
+            }
 
-//                     0x54 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let [hours, minutes, seconds, frames,
-// fractional_frames] = scanner                             .eat_array::<0x05>()
-//                             .ok_or(TryFromEventKindError::InvalidData)?;
-//                         if !scanner.done() {
-//                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::SMPTEOffset {
-//                             hours,
-//                             minutes,
-//                             seconds,
-//                             frames,
-//                             fractional_frames,
-//                         })
-//                     }
+            0x54 => {
+                let mut scanner = Scanner::new(data);
+                let [hours, minutes, seconds, frames, fractional_frames] =
+                    *scanner.eat_bytes::<5>().ok_or(TryFromError::InvalidData)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::SMPTEOffset {
+                    hours,
+                    minutes,
+                    seconds,
+                    frames,
+                    fractional_frames,
+                })
+            }
 
-//                     0x58 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let [numerator, denominator, cc, bb] = scanner
-//                             .eat_array::<0x04>()
-//                             .ok_or(TryFromEventKindError::InvalidData)?;
-//                         if !scanner.done() {
-//                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::TimeSignature {
-//                             numerator,
-//                             denominator,
-//                             midi_clocks_per_metronome_click: cc,
-//                             thirty_second_notes_per_midi_quarter_note: bb,
-//                         })
-//                     }
+            0x58 => {
+                let mut scanner = Scanner::new(data);
+                let [numerator, denominator, cc, bb] =
+                    *scanner.eat_bytes::<4>().ok_or(TryFromError::InvalidData)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::TimeSignature {
+                    numerator,
+                    denominator,
+                    midi_clocks_per_metronome_click: cc,
+                    thirty_second_notes_per_midi_quarter_note: bb,
+                })
+            }
 
-//                     0x59 => {
-//                         let mut scanner = Scanner::new(data);
-//                         let sharps_flats =
-//
-// scanner.eat().ok_or(TryFromEventKindError::InvalidData)? as i8;
-// let major_minor =
-// scanner.eat().ok_or(TryFromEventKindError::InvalidData)?;
-// if !scanner.done() {                             return
-// Err(TryFromEventKindError::InvalidScannerState);                         }
-//                         Ok(MetaEvent::KeySignature {
-//                             sharps_flats,
-//                             major_minor,
-//                         })
-//                     }
+            0x59 => {
+                let mut scanner = Scanner::new(data);
+                let sharps_flats = *scanner.eat().ok_or(TryFromError::InvalidData)? as i8;
+                let major_minor = *scanner.eat().ok_or(TryFromError::InvalidData)?;
+                if !scanner.done() {
+                    return Err(TryFromError::InvalidScannerState);
+                }
+                Ok(MetaEvent::KeySignature {
+                    sharps_flats,
+                    major_minor,
+                })
+            }
 
-//                     status =>
-// Err(TryFromEventKindError::InvalidStatus(*status)),                 }
-//             }
-//             _ => Err(TryFromEventKindError::InvalidEventKind),
-//         }
-//     }
-// }
+            status => Err(TryFromError::InvalidStatus(*status)),
+        }
+    }
+}

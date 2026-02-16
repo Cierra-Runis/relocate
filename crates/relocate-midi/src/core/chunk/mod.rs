@@ -60,7 +60,7 @@ pub enum TryFromError {
     HeaderChunkFileToHeaderChunk(crate::core::chunk::header::TryFromError),
     ChunkFileToTrackChunkFile(crate::file::chunk::track::TryFromError),
     TrackChunkFileToTrackEventsFile(crate::file::event::track::TryFromError),
-    TrackEventsFileToTrackChunk(crate::core::chunk::track::TryFromError),
+    TrackEventsFileToTrackChunk(crate::core::event::TryFromError),
 }
 
 impl<'a> TryFrom<&'a ChunkFile<'a>> for Chunk {
