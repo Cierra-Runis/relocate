@@ -185,7 +185,7 @@ pub enum TryFromError {
     InvalidNumber,
     InvalidData,
     InvalidScannerState,
-    #[debug("{:X}", _0)]
+    #[debug("InvalidStatus({:X})", _0)]
     InvalidStatus(#[error(ignore)] u8),
 }
 
@@ -193,19 +193,17 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
     type Error = TryFromError;
 
     fn try_from(value: &MetaEventFile) -> Result<Self, Self::Error> {
-        let status = value.status;
-        let data = value.data;
         macro_rules! text_event {
             ($variant:ident) => {
                 Ok(MetaEvent::$variant(
-                    String::from_utf8_lossy(data).to_string(),
+                    String::from_utf8_lossy(value.data).to_string(),
                 ))
             };
         }
 
-        match status {
+        match value.kind {
             0x00 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let number = scanner.eat_u16_be().ok_or(TryFromError::InvalidNumber)?;
                 if !scanner.done() {
                     return Err(TryFromError::InvalidScannerState);
@@ -222,7 +220,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             0x07 => text_event!(CuePoint),
 
             0x20 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let channel = *scanner.eat().ok_or(TryFromError::InvalidData)?;
                 if !scanner.done() {
                     return Err(TryFromError::InvalidScannerState);
@@ -231,7 +229,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             }
 
             0x21 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let port = *scanner.eat().ok_or(TryFromError::InvalidData)?;
                 if !scanner.done() {
                     return Err(TryFromError::InvalidScannerState);
@@ -242,7 +240,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             0x2F => Ok(MetaEvent::EndOfTrack),
 
             0x51 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let [t1, t2, t3] = *scanner.eat_bytes::<3>().ok_or(TryFromError::InvalidData)?;
                 let tempo = u32::from_be_bytes([0x00, t1, t2, t3]);
                 if !scanner.done() {
@@ -252,7 +250,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             }
 
             0x54 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let [hours, minutes, seconds, frames, fractional_frames] =
                     *scanner.eat_bytes::<5>().ok_or(TryFromError::InvalidData)?;
                 if !scanner.done() {
@@ -268,7 +266,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             }
 
             0x58 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let [numerator, denominator, cc, bb] =
                     *scanner.eat_bytes::<4>().ok_or(TryFromError::InvalidData)?;
                 if !scanner.done() {
@@ -283,7 +281,7 @@ impl<'a> TryFrom<&'a MetaEventFile<'a>> for MetaEvent {
             }
 
             0x59 => {
-                let mut scanner = Scanner::new(data);
+                let mut scanner = Scanner::new(value.data);
                 let sharps_flats = *scanner.eat().ok_or(TryFromError::InvalidData)? as i8;
                 let major_minor = *scanner.eat().ok_or(TryFromError::InvalidData)?;
                 if !scanner.done() {
